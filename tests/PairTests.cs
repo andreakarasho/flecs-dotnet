@@ -1,0 +1,88 @@
+using Xunit;
+
+namespace Flecs.Tests;
+
+public class PairTests
+{
+    [Fact]
+    public void Pair_TypedEncodingHasPairFlag()
+    {
+        var w = new World();
+        var pair = w.Pair<Likes, Apple>();
+        Assert.True(pair.IsPair);
+        Assert.NotEqual(0u, pair.Relation);
+        Assert.NotEqual(0u, pair.Target);
+    }
+
+    [Fact]
+    public void Add_TypedPair()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<Likes, Apple>(e);
+        Assert.True(w.Has<Likes, Apple>(e));
+    }
+
+    [Fact]
+    public void Remove_TypedPair()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<Likes, Apple>(e);
+        w.Remove<Likes, Apple>(e);
+        Assert.False(w.Has<Likes, Apple>(e));
+    }
+
+    [Fact]
+    public void Pair_DifferentRelationsAreDistinct()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<Likes, Apple>(e);
+        w.Add<Hates, Apple>(e);
+        Assert.True(w.Has<Likes, Apple>(e));
+        Assert.True(w.Has<Hates, Apple>(e));
+    }
+
+    [Fact]
+    public void Pair_DifferentTargetsAreDistinct()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<Likes, Apple>(e);
+        w.Add<Likes, Orange>(e);
+        Assert.True(w.Has<Likes, Apple>(e));
+        Assert.True(w.Has<Likes, Orange>(e));
+    }
+
+    [Fact]
+    public void Pair_RuntimeEntityTarget()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        var target = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        w.Add(e, rel, target);
+        Assert.True(w.Has(e, w.Pair(rel, target)));
+    }
+
+    [Fact]
+    public void PairFlagBitSetForPairs()
+    {
+        EntityId rel = new(10, 1);
+        EntityId tgt = new(20, 1);
+        var p = Id.MakePair(rel, tgt);
+        Assert.True(p.IsPair);
+        Assert.Equal(10u, p.Relation);
+        Assert.Equal(20u, p.Target);
+    }
+
+    [Fact]
+    public void NonPairIdHasNoPairFlag()
+    {
+        EntityId e = new(7, 1);
+        Id id = (Id)e;
+        Assert.False(id.IsPair);
+        Assert.Equal(7u, id.Component);
+    }
+}
