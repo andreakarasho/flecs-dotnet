@@ -440,6 +440,10 @@ public sealed partial class World
         }
     }
 
+    // Get<T>: returns ref to T on entity itself, or via IsA chain (shared ref
+    // from prefab archetype). Mirrors flecs ecs_get_id semantics. Mutating a
+    // shared (inherited) ref affects all instances pointing to the prefab.
+    // Use Owns<T> to check literal ownership before mutating.
     public ref T Get<T>(EntityId entity) where T : struct
     {
         ref var rec = ref GetSlot(entity.Id);
@@ -451,13 +455,16 @@ public sealed partial class World
         if (!_componentInfo.ContainsKey(compId))
             throw new InvalidOperationException($"'{typeof(T).Name}' is a tag, has no data.");
         var table = _tablesById[rec.TableId]!;
-        if (!table.Has(compId))
+        if (table.Has(compId))
+            return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
+        var (found, t, row) = FindInIsAChain(entity, compId);
+        if (!found)
             throw new InvalidOperationException($"Entity does not have component '{typeof(T).Name}'.");
-        return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
+        return ref ((Column<T>)t!.Columns[t.IndexOf(compId)]!).GetRef(row);
     }
 
     // By-value optional accessor. Use inside Query.Each callbacks for the
-    // "optional term" pattern: check + grab in one call.
+    // "optional term" pattern: check + grab in one call. Walks IsA chain.
     public bool TryGetComponent<T>(EntityId entity, out T value) where T : struct
     {
         ref var rec = ref GetSlot(entity.Id);
@@ -467,14 +474,20 @@ public sealed partial class World
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) { value = default; return false; }
         var table = _tablesById[rec.TableId]!;
-        if (!table.Has(compId)) { value = default; return false; }
-        value = ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
+        if (table.Has(compId))
+        {
+            value = ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
+            return true;
+        }
+        var (found, t, row) = FindInIsAChain(entity, compId);
+        if (!found) { value = default; return false; }
+        value = ((Column<T>)t!.Columns[t.IndexOf(compId)]!).GetRef(row);
         return true;
     }
 
     // Mutating optional accessor. Returns a writable ref to the real column
-    // slot when present, a NullRef when absent. Caller checks via
-    // `Unsafe.IsNullRef(ref v)`. Use inside Query.Each callbacks.
+    // slot when present (own or shared via IsA), a NullRef when absent.
+    // Caller checks via `Unsafe.IsNullRef(ref v)`.
     //
     //   ref var v = ref world.TryGetRef<Velocity>(e);
     //   if (!Unsafe.IsNullRef(ref v)) v.Dx *= 0.5f;
@@ -487,19 +500,27 @@ public sealed partial class World
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) return ref Unsafe.NullRef<T>();
         var table = _tablesById[rec.TableId]!;
-        if (!table.Has(compId)) return ref Unsafe.NullRef<T>();
-        var col = (Column<T>)table.Columns[table.IndexOf(compId)]!;
-        return ref col.GetRef(rec.Row);
+        if (table.Has(compId))
+            return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
+        var (found, t, row) = FindInIsAChain(entity, compId);
+        if (!found) return ref Unsafe.NullRef<T>();
+        return ref ((Column<T>)t!.Columns[t.IndexOf(compId)]!).GetRef(row);
     }
 
-    // ========== Has / Add / Remove (unified for component, tag, pair) ==========
+    // ========== Has / Owns / Add / Remove (unified for component, tag, pair) ==========
+    //
+    // Has<T>:  walks IsA chain (Self+Up). Mirrors flecs ecs_has_id.
+    // Owns<T>: literal check, ignores IsA. Mirrors flecs ecs_owns_id.
 
     public bool Has<T>(EntityId entity) where T : struct
     {
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
         ref var rec = ref GetSlot(entity.Id);
-        return _tablesById[rec.TableId]!.Has((Id)compEnt);
+        var compId = (Id)compEnt;
+        if (_tablesById[rec.TableId]!.Has(compId)) return true;
+        var (found, _, _) = FindInIsAChain(entity, compId);
+        return found;
     }
 
     public bool Has<TR, TT>(EntityId entity) where TR : struct where TT : struct
@@ -508,10 +529,42 @@ public sealed partial class World
         if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return false;
         if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return false;
         ref var rec = ref GetSlot(entity.Id);
-        return _tablesById[rec.TableId]!.Has(Id.MakePair(rel, tgt));
+        var pair = Id.MakePair(rel, tgt);
+        if (_tablesById[rec.TableId]!.Has(pair)) return true;
+        var (found, _, _) = FindInIsAChain(entity, pair);
+        return found;
     }
 
     public bool Has(EntityId entity, Id componentId)
+    {
+        if (!IsAlive(entity)) return false;
+        ref var rec = ref GetSlot(entity.Id);
+        if (_tablesById[rec.TableId]!.Has(componentId)) return true;
+        var (found, _, _) = FindInIsAChain(entity, componentId);
+        return found;
+    }
+
+    // Literal-only ownership check. Does NOT walk IsA. Use when you need to
+    // distinguish own components from inherited ones (e.g. before a write-in-
+    // place mutation that would otherwise affect a shared prefab value).
+    public bool Owns<T>(EntityId entity) where T : struct
+    {
+        if (!IsAlive(entity)) return false;
+        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
+        ref var rec = ref GetSlot(entity.Id);
+        return _tablesById[rec.TableId]!.Has((Id)compEnt);
+    }
+
+    public bool Owns<TR, TT>(EntityId entity) where TR : struct where TT : struct
+    {
+        if (!IsAlive(entity)) return false;
+        if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return false;
+        if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return false;
+        ref var rec = ref GetSlot(entity.Id);
+        return _tablesById[rec.TableId]!.Has(Id.MakePair(rel, tgt));
+    }
+
+    public bool Owns(EntityId entity, Id componentId)
     {
         if (!IsAlive(entity)) return false;
         ref var rec = ref GetSlot(entity.Id);

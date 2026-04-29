@@ -23,8 +23,9 @@ public class IsATests
         w.Set(prefab, new Position(10, 20));
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        Assert.False(w.Has<Position>(inst));        // direct: no
-        Assert.True(w.HasInherited<Position>(inst)); // via IsA: yes
+        Assert.False(w.Owns<Position>(inst));        // literal: no
+        Assert.True(w.Has<Position>(inst));          // Self+Up: yes (matches flecs ecs_has_id)
+        Assert.True(w.HasInherited<Position>(inst)); // alias of Has now
     }
 
     [Fact]
@@ -161,7 +162,8 @@ public class IsATests
         w.Add<Boss>(prefab);
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        Assert.False(w.Has<Boss>(inst));
+        Assert.False(w.Owns<Boss>(inst));
+        Assert.True(w.Has<Boss>(inst));
         Assert.True(w.HasInherited<Boss>(inst));
     }
 
@@ -173,7 +175,8 @@ public class IsATests
         w.Add<Likes, Apple>(prefab);
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        Assert.False(w.Has<Likes, Apple>(inst));
+        Assert.False(w.Owns<Likes, Apple>(inst));
+        Assert.True(w.Has<Likes, Apple>(inst));
         Assert.True(w.HasInherited<Likes, Apple>(inst));
     }
 
@@ -193,5 +196,96 @@ public class IsATests
         w.SetIsA(inst, b);
         // Closer ancestor wins.
         Assert.Equal(2, w.GetInherited<Position>(inst).X);
+    }
+
+    // ===== Self+Up semantics on direct accessors (flecs-parity) =====
+
+    [Fact]
+    public void Has_WalksIsAChain()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(1, 1));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        Assert.True(w.Has<Position>(inst));
+        Assert.False(w.Owns<Position>(inst));
+    }
+
+    [Fact]
+    public void Get_ReturnsSharedRefViaIsA()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(5, 6));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        ref var p = ref w.Get<Position>(inst);
+        Assert.Equal(5, p.X);
+        // Mutating the shared ref affects the prefab.
+        p.X = 42;
+        Assert.Equal(42, w.Get<Position>(prefab).X);
+    }
+
+    [Fact]
+    public void Get_ReturnsOwnRefAfterOverride()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(1, 1));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        w.Set(inst, new Position(99, 99));
+        Assert.True(w.Owns<Position>(inst));
+        ref var p = ref w.Get<Position>(inst);
+        Assert.Equal(99, p.X);
+        // Prefab not affected.
+        Assert.Equal(1, w.Get<Position>(prefab).X);
+    }
+
+    [Fact]
+    public void TryGetRef_WalksIsAChain()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(7, 8));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        ref var p = ref w.TryGetRef<Position>(inst);
+        Assert.False(System.Runtime.CompilerServices.Unsafe.IsNullRef(ref p));
+        Assert.Equal(7, p.X);
+    }
+
+    [Fact]
+    public void TryGetComponent_WalksIsAChain()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(3, 4));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        Assert.True(w.TryGetComponent<Position>(inst, out var p));
+        Assert.Equal(3, p.X);
+    }
+
+    [Fact]
+    public void Owns_LiteralOnly_TagsAndPairs()
+    {
+        var w = new World();
+        w.Tag<Boss>();
+        var prefab = w.CreateEntity();
+        w.Add<Boss>(prefab);
+        w.Add<Likes, Apple>(prefab);
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+
+        Assert.False(w.Owns<Boss>(inst));
+        Assert.False(w.Owns<Likes, Apple>(inst));
+        Assert.True(w.Has<Boss>(inst));
+        Assert.True(w.Has<Likes, Apple>(inst));
+
+        // After explicit Add on instance, Owns flips true.
+        w.Add<Boss>(inst);
+        Assert.True(w.Owns<Boss>(inst));
     }
 }
