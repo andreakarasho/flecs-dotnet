@@ -350,6 +350,10 @@ public abstract class QueryBase
     // Per-term traversal overrides. An entry wins over _inherited for that
     // specific term; absent entries fall back to _inherited (IsA) or literal.
     internal Dictionary<Id, TermTraversal>? _termTraversals;
+    // Cascade ordering relation. 0 = no cascade. After Rematch, _matched is
+    // sorted by RelationDepth ascending (ancestors first). Mirrors flecs
+    // ecs_query_t cascade. Typical use: ChildOf for transform propagation.
+    internal uint _cascadeRel;
     private Dictionary<int, int>? _lastVersion;
 
     // True iff matching considers anything beyond literal Self for any term.
@@ -374,19 +378,47 @@ public abstract class QueryBase
         Reset();
     }
 
+    // Enable depth-ordered iteration. Subsequent Each/Run/enum visits matched
+    // tables in ascending RelationDepth order — ancestors before descendants.
+    protected void SetCascade(uint relation)
+    {
+        if (_cascadeRel != relation) { _cascadeRel = relation; Reset(); }
+    }
+
     protected internal void Rematch()
     {
         var tables = _world._tablesById;
         var worldForInherit = _anyInheritance ? _world : null;
+        bool added = false;
         for (int i = _matchedUpTo + 1; i < tables.Count; i++)
         {
             var t = tables[i];
             if (t == null) continue;
             if (QueryUtil.Matches(t, _with, _without, _orGroups, _world.Wildcard.Id,
                     worldForInherit, _inherited, _termTraversals))
-                _matched.Add(t);
+            { _matched.Add(t); added = true; }
         }
         _matchedUpTo = tables.Count - 1;
+        if (added && _cascadeRel != 0) SortMatchedByCascade();
+    }
+
+    // Sort _matched in ascending depth via _cascadeRel. Empty tables sort
+    // last so iteration's `Count == 0` skip stays cheap. Allocates a temp
+    // pair array — only on cascade queries, only when match set grows.
+    private void SortMatchedByCascade()
+    {
+        int n = _matched.Count;
+        if (n <= 1) return;
+        var pairs = new (Table t, int depth)[n];
+        for (int i = 0; i < n; i++)
+        {
+            var t = _matched[i];
+            int d = (t.Count == 0) ? int.MaxValue
+                                   : _world.RelationDepth(t.Entities[0], _cascadeRel);
+            pairs[i] = (t, d);
+        }
+        Array.Sort(pairs, (a, b) => a.depth.CompareTo(b.depth));
+        for (int i = 0; i < n; i++) _matched[i] = pairs[i].t;
     }
 
     public int MatchedTableCount { get { Rematch(); return _matched.Count; } }
@@ -604,6 +636,19 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    // Cascade<T>: Up<T>(rel) + ancestors-first iteration. Default rel ChildOf.
+    public Query<T1> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     // Foreach-iterable. Yields Row<T1>, no delegate dispatch.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -696,6 +741,18 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1, T2> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    public Query<T1, T2> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1, T2> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2> GetEnumerator() => new(this);
@@ -799,6 +856,18 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1, T2, T3> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    public Query<T1, T2, T3> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1, T2, T3> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3> GetEnumerator() => new(this);
@@ -900,6 +969,18 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1, T2, T3, T4> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    public Query<T1, T2, T3, T4> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1, T2, T3, T4> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4> GetEnumerator() => new(this);
@@ -993,6 +1074,18 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1, T2, T3, T4, T5> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    public Query<T1, T2, T3, T4, T5> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1, T2, T3, T4, T5> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4, T5> GetEnumerator() => new(this);
@@ -1087,6 +1180,18 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
     { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Parent<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Cascade<T>() where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, -1);
+        SetCascade(_world.ChildOf.Id);
+        return this;
+    }
+    public Query<T1, T2, T3, T4, T5, T6> Cascade<T>(EntityId relation) where T : struct
+    {
+        SetTermTraversal(_world.IdOf<T>(), relation.Id, -1);
+        SetCascade(relation.Id);
+        return this;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4, T5, T6> GetEnumerator() => new(this);

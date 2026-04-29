@@ -637,6 +637,39 @@ public sealed partial class World
     internal (bool found, Table? table, int row) FindInIsAChain(EntityId start, Id id)
         => FindInChain(start, id, IsA.Id, blockable: true);
 
+    // Walk the first (rel, *) pair at each level. Returns the number of hops
+    // from 'start' to its furthest reachable ancestor via 'relUint'. Used by
+    // Cascade query ordering. Tree assumption — for DAGs picks the first
+    // target. Cycle-safe via 1024 step cap.
+    internal int RelationDepth(EntityId start, uint relUint)
+    {
+        var cur = start;
+        int depth = 0;
+        const int safety = 1024;
+        while (depth < safety)
+        {
+            if (!IsAliveCore(cur)) return depth;
+            ref var rec = ref GetSlot(cur.Id);
+            var t = _tablesById[rec.TableId]!;
+            bool advanced = false;
+            for (int i = 0; i < t.ComponentIds.Length; i++)
+            {
+                var cid = t.ComponentIds[i];
+                if (!cid.IsPair || cid.Relation != relUint) continue;
+                uint tgt = cid.Target;
+                if (tgt == 0) continue;
+                ref var ts = ref GetSlot(tgt);
+                if (!ts.Alive) continue;
+                cur = new EntityId(tgt, ts.Generation);
+                depth++;
+                advanced = true;
+                break;
+            }
+            if (!advanced) break;
+        }
+        return depth;
+    }
+
     // Generalized chain walk via arbitrary relation. blockable=true honors
     // DontInherit (short-circuits ancestor expansion). maxDepth caps the
     // BFS — 0 = self-only, 1 = direct neighbors, -1 = unlimited. Uses
