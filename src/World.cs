@@ -40,6 +40,15 @@ public sealed partial class World
     // swapped on flush — no per-flush array alloc. Commands pooled per-type
     // (ThreadStatic) — zero alloc after warmup.
     private int _deferDepth;
+    // Readonly-mode depth. Bumped during query iteration. Mutations route
+    // through the command queue identically to defer. Distinct from defer:
+    // IsReadonly / IsDeferred report separately, and StrictReadonly throws
+    // on mutate-while-readonly even when no explicit Defer is active.
+    // Mirrors flecs ecs_readonly_begin / ecs_readonly_end.
+    private int _readonlyDepth;
+    // When true, structural mutation while readonly throws instead of queueing.
+    // Off by default; opt in for debugging accidental in-iter mutations.
+    public bool StrictReadonly;
     private List<Command> _commands = new();
     private List<Command> _flushing = new();
 
@@ -78,6 +87,12 @@ public sealed partial class World
     public readonly EntityId Inheritable;
     public readonly EntityId DontInherit;
     public readonly EntityId Traversable;
+    // CanToggle — component opted into non-fragmenting enable/disable. Tables
+    // containing CanToggle component-ids allocate parallel Bitset columns;
+    // Toggle/SetEnabled flip bits in place (no archetype migration). Iteration
+    // skips rows where any required term's bit is clear. Mirrors flecs
+    // EcsCanToggle.
+    public readonly EntityId CanToggle;
     // Builtin phases. Progress() runs systems in this order. Mirror flecs
     // builtin pipeline phase ordering.
     public readonly EntityId OnLoad, PostLoad, PreUpdate, OnUpdate,
@@ -148,6 +163,9 @@ public sealed partial class World
     // Default = absent (inheritable). Add to opt out.
     private readonly HashSet<uint> _dontInheritIds = new();
     private readonly HashSet<uint> _traversableRelIds = new();
+    // Component ids opted into non-fragmenting toggle. Tables containing these
+    // ids allocate parallel Bitset columns. Mirrors flecs CanToggle trait.
+    internal readonly HashSet<uint> _canToggleIds = new();
 
     public World()
     {
@@ -167,6 +185,7 @@ public sealed partial class World
         Inheritable = CreateEntityCore();
         DontInherit = CreateEntityCore();
         Traversable = CreateEntityCore();
+        CanToggle = CreateEntityCore();
         OnLoad = CreateEntityCore();
         PostLoad = CreateEntityCore();
         PreUpdate = CreateEntityCore();
@@ -196,6 +215,25 @@ public sealed partial class World
     public int TableCount => _tablesById.Count - 1;
     public int ComponentCount { get { lock (_lock) { return _componentInfo.Count; } } }
     public bool IsDeferred { get { lock (_lock) { return _deferDepth > 0; } } }
+    public bool IsReadonly { get { lock (_lock) { return _readonlyDepth > 0; } } }
+
+    // Decide whether a structural mutation should be queued vs applied. Caller
+    // holds _lock. Returns true when mutations route through the command queue
+    // (either explicit Defer or iteration-window readonly). Throws if the
+    // world has StrictReadonly enabled and we're inside a readonly window
+    // without an explicit Defer — useful for catching accidental in-iter
+    // mutations during development.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool ShouldQueueLocked()
+    {
+        if (_deferDepth > 0) return true;
+        if (_readonlyDepth > 0)
+        {
+            if (StrictReadonly) ThrowHelper.StrictReadonlyMutation();
+            return true;
+        }
+        return false;
+    }
 
     // ========== Entity lifecycle ==========
 
@@ -251,7 +289,7 @@ public sealed partial class World
         if (entity.Id == 0) return;
         lock (_lock)
         {
-            if (_deferDepth > 0)
+            if (ShouldQueueLocked())
             {
                 _commands.Add(DeleteCmd.Rent(entity));
                 return;
@@ -662,6 +700,15 @@ public sealed partial class World
                 var sc = src.Columns[i];
                 var dc = dst.Columns[j];
                 if (sc != null && dc != null) sc.MoveTo(this, entity, rec.Row, dc, newRow);
+                // Carry enabled bit across migration. AddRow defaulted dst bit
+                // to true; only override when src had bitset and bit was clear.
+                if (dst.HasAnyBitset)
+                {
+                    var sb = src.Bits[i];
+                    var db = dst.Bits[j];
+                    if (sb != null && db != null && !sb.Get(rec.Row))
+                        db.Set(newRow, false);
+                }
                 i++; j++;
             }
             else if (a.Value < b.Value) i++;
@@ -688,19 +735,31 @@ public sealed partial class World
     private Table CreateTable(Id[] sortedIds)
     {
         var cols = new Column?[sortedIds.Length];
+        var bits = new Bitset?[sortedIds.Length];
         for (int i = 0; i < sortedIds.Length; i++)
         {
             if (_componentInfo.TryGetValue(sortedIds[i], out var info))
                 cols[i] = info.Factory();
             // tag / pair-without-data → null column
+            // CanToggle: parallel bitset for any opted-in id (component or tag).
+            if (_canToggleIds.Contains(GetCanToggleKeyForId(sortedIds[i])))
+                bits[i] = new Bitset();
         }
         int id = _tablesById.Count;
-        var table = new Table(id, sortedIds, cols);
+        var table = new Table(id, sortedIds, cols, bits);
         _tablesById.Add(table);
         _tablesBySig[new SignatureKey(sortedIds)] = table;
         OnTableCreate?.Invoke(this, table);
         return table;
     }
+
+    // Resolve the lookup key used against _canToggleIds for an Id. For plain
+    // component/tag ids the key is the entity uint. For pair ids we key on the
+    // relation entity (relation marked CanToggle → all its (R, *) pairs are
+    // toggleable, mirroring flecs trait inheritance to pairs).
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint GetCanToggleKeyForId(Id id)
+        => id.IsPair ? id.Relation : id.Component;
 
     private ref EntityRecord GetSlot(uint id)
     {

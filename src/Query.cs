@@ -456,6 +456,21 @@ public abstract class QueryBase
     // members directly across types.
     internal void MarkObservedInternal() => MarkObserved();
 
+    // Resolve the CanToggle bitset for term 'id' on table 't'. Returns null
+    // when the term is not toggleable, the table has no bitsets, or the source
+    // is shared (inherited) — shared CanToggle bits live on ancestor rows and
+    // would disable every instance via a single ancestor flip; treat shared
+    // refs as always enabled instead. Iteration's row-skip uses this: a null
+    // result means "no per-row filter needed for this term".
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal Bitset? ResolveBitset(Table t, Id id, int sharedRow)
+    {
+        if (sharedRow >= 0) return null;
+        if (!t.HasAnyBitset) return null;
+        if (!t.Has(id)) return null;
+        return t.Bits[t.IndexOf(id)];
+    }
+
     // Resolve a per-table column source for term 'id'. When the table holds
     // 'id' directly: (col, sharedRow=-1) — caller indexes by row r.
     // When inheritance is enabled and the table only holds it via IsA:
@@ -668,7 +683,7 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     // matches your query shape.
     public void Each(EachAction<T1> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -676,17 +691,21 @@ public sealed class Query<T1> : QueryBase where T1 : struct
             if (t.Count == 0) continue;
             var (col1, shared1) = ResolveSource<T1>(t, _c1);
             if (col1 == null && !_t1Optional) continue;
+            var bs1 = ResolveBitset(t, _c1, shared1);
             var ents = t.Entities;
             int n = t.Count;
             for (int r = 0; r < n; r++)
+            {
+                if (bs1 != null && !bs1.Get(r)) continue;
                 action(ents[r], ref QueryUtil.Resolve(col1, shared1, r));
+            }
         }
         MarkObserved();
     }
 
     public void Run(IterAction<T1> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -771,7 +790,7 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
 
     public void Each(EachAction<T1, T2> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -780,10 +799,12 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
             var (col1, s1) = ResolveSource<T1>(t, _c1);
             var (col2, s2) = ResolveSource<T2>(t, _c2);
             if ((col1 == null && !_t1Optional) || (col2 == null && !_t2Optional)) continue;
+            var bs1 = ResolveBitset(t, _c1, s1);
+            var bs2 = ResolveBitset(t, _c2, s2);
             var ents = t.Entities;
             int n = t.Count;
-            // Fast path — both own (no shared, no optional miss).
-            if (col1 != null && col2 != null && s1 < 0 && s2 < 0)
+            // Fast path — both own (no shared, no optional miss, no toggle).
+            if (col1 != null && col2 != null && s1 < 0 && s2 < 0 && bs1 == null && bs2 == null)
             {
                 for (int r = 0; r < n; r++)
                     action(ents[r], ref col1.GetRef(r), ref col2.GetRef(r));
@@ -791,9 +812,13 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
             else
             {
                 for (int r = 0; r < n; r++)
+                {
+                    if (bs1 != null && !bs1.Get(r)) continue;
+                    if (bs2 != null && !bs2.Get(r)) continue;
                     action(ents[r],
                         ref QueryUtil.Resolve(col1, s1, r),
                         ref QueryUtil.Resolve(col2, s2, r));
+                }
             }
         }
         MarkObserved();
@@ -801,7 +826,7 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
 
     public void Run(IterAction<T1, T2> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -886,7 +911,7 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
 
     public void Each(EachAction<T1, T2, T3> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -898,9 +923,13 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
             if ((col1 == null && !_t1Optional)
                 || (col2 == null && !_t2Optional)
                 || (col3 == null && !_t3Optional)) continue;
+            var bs1 = ResolveBitset(t, _c1, s1);
+            var bs2 = ResolveBitset(t, _c2, s2);
+            var bs3 = ResolveBitset(t, _c3, s3);
             var ents = t.Entities;
             int n = t.Count;
-            if (col1 != null && col2 != null && col3 != null && s1 < 0 && s2 < 0 && s3 < 0)
+            if (col1 != null && col2 != null && col3 != null && s1 < 0 && s2 < 0 && s3 < 0
+                && bs1 == null && bs2 == null && bs3 == null)
             {
                 for (int r = 0; r < n; r++)
                     action(ents[r], ref col1.GetRef(r), ref col2.GetRef(r), ref col3.GetRef(r));
@@ -908,10 +937,15 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
             else
             {
                 for (int r = 0; r < n; r++)
+                {
+                    if (bs1 != null && !bs1.Get(r)) continue;
+                    if (bs2 != null && !bs2.Get(r)) continue;
+                    if (bs3 != null && !bs3.Get(r)) continue;
                     action(ents[r],
                         ref QueryUtil.Resolve(col1, s1, r),
                         ref QueryUtil.Resolve(col2, s2, r),
                         ref QueryUtil.Resolve(col3, s3, r));
+                }
             }
         }
         MarkObserved();
@@ -919,7 +953,7 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
 
     public void Run(IterAction<T1, T2, T3> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -996,7 +1030,7 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
 
     public void Each(EachAction<T1, T2, T3, T4> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -1007,9 +1041,14 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
             var (col3, s3) = ResolveSource<T3>(t, _c3);
             var (col4, s4) = ResolveSource<T4>(t, _c4);
             if (col1 == null || col2 == null || col3 == null || col4 == null) continue;
+            var bs1 = ResolveBitset(t, _c1, s1);
+            var bs2 = ResolveBitset(t, _c2, s2);
+            var bs3 = ResolveBitset(t, _c3, s3);
+            var bs4 = ResolveBitset(t, _c4, s4);
             var ents = t.Entities;
             int n = t.Count;
-            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0)
+            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0
+                && bs1 == null && bs2 == null && bs3 == null && bs4 == null)
             {
                 for (int r = 0; r < n; r++)
                     action(ents[r], ref col1.GetRef(r), ref col2.GetRef(r),
@@ -1018,11 +1057,17 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
             else
             {
                 for (int r = 0; r < n; r++)
+                {
+                    if (bs1 != null && !bs1.Get(r)) continue;
+                    if (bs2 != null && !bs2.Get(r)) continue;
+                    if (bs3 != null && !bs3.Get(r)) continue;
+                    if (bs4 != null && !bs4.Get(r)) continue;
                     action(ents[r],
                         ref QueryUtil.Resolve(col1, s1, r),
                         ref QueryUtil.Resolve(col2, s2, r),
                         ref QueryUtil.Resolve(col3, s3, r),
                         ref QueryUtil.Resolve(col4, s4, r));
+                }
             }
         }
         MarkObserved();
@@ -1030,7 +1075,7 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
 
     public void Run(IterAction<T1, T2, T3, T4> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -1101,7 +1146,7 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
 
     public void Each(EachAction<T1, T2, T3, T4, T5> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -1113,9 +1158,15 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
             var (col4, s4) = ResolveSource<T4>(t, _c4);
             var (col5, s5) = ResolveSource<T5>(t, _c5);
             if (col1 == null || col2 == null || col3 == null || col4 == null || col5 == null) continue;
+            var bs1 = ResolveBitset(t, _c1, s1);
+            var bs2 = ResolveBitset(t, _c2, s2);
+            var bs3 = ResolveBitset(t, _c3, s3);
+            var bs4 = ResolveBitset(t, _c4, s4);
+            var bs5 = ResolveBitset(t, _c5, s5);
             var ents = t.Entities;
             int n = t.Count;
-            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0 && s5 < 0)
+            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0 && s5 < 0
+                && bs1 == null && bs2 == null && bs3 == null && bs4 == null && bs5 == null)
             {
                 for (int r = 0; r < n; r++)
                     action(ents[r], ref col1.GetRef(r), ref col2.GetRef(r),
@@ -1124,12 +1175,19 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
             else
             {
                 for (int r = 0; r < n; r++)
+                {
+                    if (bs1 != null && !bs1.Get(r)) continue;
+                    if (bs2 != null && !bs2.Get(r)) continue;
+                    if (bs3 != null && !bs3.Get(r)) continue;
+                    if (bs4 != null && !bs4.Get(r)) continue;
+                    if (bs5 != null && !bs5.Get(r)) continue;
                     action(ents[r],
                         ref QueryUtil.Resolve(col1, s1, r),
                         ref QueryUtil.Resolve(col2, s2, r),
                         ref QueryUtil.Resolve(col3, s3, r),
                         ref QueryUtil.Resolve(col4, s4, r),
                         ref QueryUtil.Resolve(col5, s5, r));
+                }
             }
         }
         MarkObserved();
@@ -1137,7 +1195,7 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
 
     public void Run(IterAction<T1, T2, T3, T4, T5> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -1207,7 +1265,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
 
     public void Each(EachAction<T1, T2, T3, T4, T5, T6> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {
@@ -1221,9 +1279,16 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
             var (col6, s6) = ResolveSource<T6>(t, _c6);
             if (col1 == null || col2 == null || col3 == null
                 || col4 == null || col5 == null || col6 == null) continue;
+            var bs1 = ResolveBitset(t, _c1, s1);
+            var bs2 = ResolveBitset(t, _c2, s2);
+            var bs3 = ResolveBitset(t, _c3, s3);
+            var bs4 = ResolveBitset(t, _c4, s4);
+            var bs5 = ResolveBitset(t, _c5, s5);
+            var bs6 = ResolveBitset(t, _c6, s6);
             var ents = t.Entities;
             int n = t.Count;
-            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0 && s5 < 0 && s6 < 0)
+            if (s1 < 0 && s2 < 0 && s3 < 0 && s4 < 0 && s5 < 0 && s6 < 0
+                && bs1 == null && bs2 == null && bs3 == null && bs4 == null && bs5 == null && bs6 == null)
             {
                 for (int r = 0; r < n; r++)
                     action(ents[r], ref col1.GetRef(r), ref col2.GetRef(r), ref col3.GetRef(r),
@@ -1232,6 +1297,13 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
             else
             {
                 for (int r = 0; r < n; r++)
+                {
+                    if (bs1 != null && !bs1.Get(r)) continue;
+                    if (bs2 != null && !bs2.Get(r)) continue;
+                    if (bs3 != null && !bs3.Get(r)) continue;
+                    if (bs4 != null && !bs4.Get(r)) continue;
+                    if (bs5 != null && !bs5.Get(r)) continue;
+                    if (bs6 != null && !bs6.Get(r)) continue;
                     action(ents[r],
                         ref QueryUtil.Resolve(col1, s1, r),
                         ref QueryUtil.Resolve(col2, s2, r),
@@ -1239,6 +1311,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
                         ref QueryUtil.Resolve(col4, s4, r),
                         ref QueryUtil.Resolve(col5, s5, r),
                         ref QueryUtil.Resolve(col6, s6, r));
+                }
             }
         }
         MarkObserved();
@@ -1246,7 +1319,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
 
     public void Run(IterAction<T1, T2, T3, T4, T5, T6> action)
     {
-        using var _ = _world.Defer();
+        using var _ = _world.Readonly();
         Rematch();
         for (int ti = 0; ti < _matched.Count; ti++)
         {

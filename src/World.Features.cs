@@ -508,6 +508,67 @@ public sealed partial class World
     }
     public bool IsTraversable(EntityId relation) => _traversableRelIds.Contains(relation.Id);
 
+    // CanToggle — opt component (or relation) into non-fragmenting toggle.
+    // Tables containing the id allocate parallel Bitset columns. Bits default
+    // to enabled (true) on row creation. Toggle/SetEnabled flip bits in place
+    // — no archetype migration. Iteration honors bits via row skip.
+    //
+    // Retroactive: existing tables containing the id get bitsets allocated and
+    // populated with all-enabled bits matching current row count.
+    public void MarkCanToggle<T>() where T : struct
+    {
+        lock (_lock)
+        {
+            var ent = GetOrRegisterAnyLocked<T>();
+            MarkCanToggleLocked(ent);
+        }
+    }
+
+    public void MarkCanToggle(EntityId id)
+    {
+        lock (_lock) { MarkCanToggleLocked(id); }
+    }
+
+    private void MarkCanToggleLocked(EntityId id)
+    {
+        if (!_canToggleIds.Add(id.Id)) return;
+        EnsureHasIdLocked(id, (Id)CanToggle);
+        // Retroactively allocate bitsets in existing tables that hold this id
+        // (or any pair where this id is the relation). Existing rows: enabled.
+        for (int ti = 1; ti < _tablesById.Count; ti++)
+        {
+            var t = _tablesById[ti];
+            if (t == null) continue;
+            for (int i = 0; i < t.ComponentIds.Length; i++)
+            {
+                var cid = t.ComponentIds[i];
+                uint key = cid.IsPair ? cid.Relation : cid.Component;
+                if (key != id.Id) continue;
+                if (t.Bits[i] != null) continue;
+                var bs = new Bitset();
+                for (int r = 0; r < t.Count; r++) bs.Add(true);
+                t.Bits[i] = bs;
+            }
+        }
+        // Refresh HasAnyBitset cache by recreating tables — but readonly field;
+        // instead, rely on slot scan in Table loops. The Add path above leaves
+        // HasAnyBitset stale (false) for tables that previously had no bits,
+        // so we need to flip it. Walk tables and update via internal setter.
+        for (int ti = 1; ti < _tablesById.Count; ti++)
+        {
+            var t = _tablesById[ti];
+            if (t == null) continue;
+            t.RefreshHasAnyBitset();
+        }
+    }
+
+    public bool IsCanToggle(EntityId id) => _canToggleIds.Contains(id.Id);
+    public bool IsCanToggle<T>() where T : struct
+    {
+        if (!_typeToEntity.TryGetValue(typeof(T), out var ent)) return false;
+        return _canToggleIds.Contains(ent.Id);
+    }
+
     // True if the id (component or pair) blocks IsA propagation. For pairs,
     // checks the relation entity.
     private bool IsIdDontInherit(Id id)

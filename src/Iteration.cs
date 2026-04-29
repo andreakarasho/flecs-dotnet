@@ -33,7 +33,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
 {
     private readonly Query<T1> _query;
     private readonly bool _hasInherit;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private int _rowIdx;
     private int _count;
@@ -46,7 +46,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
     {
         _query = q;
         _hasInherit = q._anyInheritance;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
@@ -129,7 +129,7 @@ public ref struct RowEnumerator<T1, T2>
 {
     private readonly Query<T1, T2> _query;
     private readonly bool _hasInherit;   // ctor-cached: enables shared-stride path
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private int _rowIdx;
     private int _count;
@@ -144,7 +144,7 @@ public ref struct RowEnumerator<T1, T2>
     {
         _query = q;
         _hasInherit = q._anyInheritance;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
@@ -242,7 +242,7 @@ public ref struct RowEnumerator<T1, T2, T3>
 {
     private readonly Query<T1, T2, T3> _query;
     private readonly bool _hasInherit;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private int _rowIdx;
     private int _count;
@@ -257,7 +257,7 @@ public ref struct RowEnumerator<T1, T2, T3>
     {
         _query = q;
         _hasInherit = q._anyInheritance;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
@@ -377,7 +377,7 @@ public ref struct RowEnumerator<T1, T2, T3>
 public ref struct TableEnumerator<T1> where T1 : struct
 {
     private readonly Query<T1> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1> _current;
     private bool _disposed;
@@ -386,7 +386,7 @@ public ref struct TableEnumerator<T1> where T1 : struct
     internal TableEnumerator(Query<T1> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;
@@ -431,7 +431,7 @@ public ref struct TableEnumerator<T1, T2>
     where T1 : struct where T2 : struct
 {
     private readonly Query<T1, T2> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1, T2> _current;
     public Iter<T1, T2> Current
@@ -445,7 +445,7 @@ public ref struct TableEnumerator<T1, T2>
     internal TableEnumerator(Query<T1, T2> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;
@@ -485,7 +485,7 @@ public ref struct TableEnumerator<T1, T2, T3>
     where T1 : struct where T2 : struct where T3 : struct
 {
     private readonly Query<T1, T2, T3> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1, T2, T3> _current;
     private bool _disposed;
@@ -494,7 +494,7 @@ public ref struct TableEnumerator<T1, T2, T3>
     internal TableEnumerator(Query<T1, T2, T3> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;
@@ -541,7 +541,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4>
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct
 {
     private readonly Query<T1, T2, T3, T4> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1, T2, T3, T4> _current;
     private bool _disposed;
@@ -550,7 +550,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4>
     internal TableEnumerator(Query<T1, T2, T3, T4> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;
@@ -599,7 +599,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5>
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct
 {
     private readonly Query<T1, T2, T3, T4, T5> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1, T2, T3, T4, T5> _current;
     private bool _disposed;
@@ -608,7 +608,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5>
     internal TableEnumerator(Query<T1, T2, T3, T4, T5> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;
@@ -658,7 +658,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5, T6>
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct
 {
     private readonly Query<T1, T2, T3, T4, T5, T6> _query;
-    private DeferScope _defer;
+    private ReadonlyScope _defer;
     private int _tableIdx;
     private Iter<T1, T2, T3, T4, T5, T6> _current;
     private bool _disposed;
@@ -667,7 +667,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5, T6>
     internal TableEnumerator(Query<T1, T2, T3, T4, T5, T6> q)
     {
         _query = q;
-        _defer = q._world.Defer();
+        _defer = q._world.Readonly();
         q.Rematch();
         _tableIdx = -1;
         _current = default;

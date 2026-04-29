@@ -54,6 +54,18 @@ internal static class ThrowHelper
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void EndReadonlyWithoutBegin()
+        => throw new InvalidOperationException("EndReadonly without matching BeginReadonly.");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void StrictReadonlyMutation()
+        => throw new InvalidOperationException(
+            "StrictReadonly: structural mutation while world readonly. Wrap in Defer or " +
+            "disable World.StrictReadonly.");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void CannotCloneDeadEntity()
         => throw new InvalidOperationException("Cannot clone dead entity.");
 

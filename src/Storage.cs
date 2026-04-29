@@ -1,7 +1,57 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Flecs;
+
+// ============================================================================
+// Bitset — packed 1-bit-per-row enabled flag column. Used for non-fragmenting
+// component toggle (CanToggle trait). Parallel to Column<T>: shares row index
+// with the data column. Mirrors flecs ecs_bitset_t.
+// ============================================================================
+internal sealed class Bitset
+{
+    private ulong[] _bits = Array.Empty<ulong>();
+    private int _count;
+
+    public int Count => _count;
+
+    public void Add(bool value)
+    {
+        EnsureCapacity(_count + 1);
+        if (value) _bits[_count >> 6] |= 1UL << (_count & 63);
+        else _bits[_count >> 6] &= ~(1UL << (_count & 63));
+        _count++;
+    }
+
+    public void RemoveSwapBack(int index)
+    {
+        int last = _count - 1;
+        if (index != last) Set(index, Get(last));
+        Set(last, false);
+        _count--;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Get(int index) => ((_bits[index >> 6] >> (index & 63)) & 1UL) != 0UL;
+
+    public void Set(int index, bool value)
+    {
+        if (value) _bits[index >> 6] |= 1UL << (index & 63);
+        else _bits[index >> 6] &= ~(1UL << (index & 63));
+    }
+
+    private void EnsureCapacity(int n)
+    {
+        int need = (n + 63) >> 6;
+        if (need > _bits.Length)
+        {
+            int newCap = _bits.Length == 0 ? 1 : _bits.Length * 2;
+            while (newCap < need) newCap *= 2;
+            Array.Resize(ref _bits, newCap);
+        }
+    }
+}
 
 // ============================================================================
 // ComponentInfo — per-world metadata for a data-bearing component. Tags and

@@ -100,6 +100,21 @@ public readonly struct DeferScope : IDisposable
 }
 
 // ============================================================================
+// ReadonlyScope — RAII helper for query iteration. Sets the world's readonly
+// flag; structural mutations (Add/Remove/Set/Delete/Toggle) auto-route through
+// the command queue and flush at scope exit. Mirrors flecs ecs_readonly_begin
+// / ecs_readonly_end. Distinct from DeferScope: Defer is explicit user-level
+// queueing; Readonly marks an iteration window where in-place mutation would
+// invalidate the iterator.
+// ============================================================================
+public readonly struct ReadonlyScope : IDisposable
+{
+    private readonly World _world;
+    internal ReadonlyScope(World world) { _world = world; }
+    public void Dispose() => _world.EndReadonly();
+}
+
+// ============================================================================
 // ScopeHandle — RAII helper for WithScope. Entities created inside the using
 // block auto-receive (ChildOf, scope). Mirrors flecs world.with_scope.
 // ============================================================================

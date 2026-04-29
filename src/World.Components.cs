@@ -16,20 +16,54 @@ public sealed partial class World
 
     public void EndDefer()
     {
+        bool flush = false;
         lock (_lock)
         {
             if (_deferDepth == 0)
                 ThrowHelper.EndDeferWithoutBegin();
             _deferDepth--;
-            if (_deferDepth > 0) return;
+            // Flush only when no defer AND no readonly remain — otherwise the
+            // queue is still owned by an outer iteration window.
+            flush = _deferDepth == 0 && _readonlyDepth == 0;
         }
-        Flush();
+        if (flush) Flush();
     }
 
     public DeferScope Defer()
     {
         BeginDefer();
         return new DeferScope(this);
+    }
+
+    // ========== Readonly mode ==========
+
+    // Bumps the readonly counter. Structural mutations route through the
+    // command queue while readonly > 0, identical to Defer. Distinct flag so
+    // tests / observers can see "we are inside a query iter" without confusing
+    // it with explicit user defer. Iteration entry points (Each / Run / Rows /
+    // TableEnumerator) wrap their bodies in this scope.
+    public void BeginReadonly()
+    {
+        lock (_lock) { _readonlyDepth++; }
+    }
+
+    public void EndReadonly()
+    {
+        bool flush = false;
+        lock (_lock)
+        {
+            if (_readonlyDepth == 0)
+                ThrowHelper.EndReadonlyWithoutBegin();
+            _readonlyDepth--;
+            flush = _readonlyDepth == 0 && _deferDepth == 0;
+        }
+        if (flush) Flush();
+    }
+
+    public ReadonlyScope Readonly()
+    {
+        BeginReadonly();
+        return new ReadonlyScope(this);
     }
 
     private void Flush()
@@ -503,7 +537,7 @@ public sealed partial class World
     {
         lock (_lock)
         {
-            if (_deferDepth > 0)
+            if (ShouldQueueLocked())
             {
                 _commands.Add(SetCmd<T>.Rent(entity, value));
                 return;
@@ -654,7 +688,7 @@ public sealed partial class World
         lock (_lock)
         {
             var ent = GetOrRegisterAnyLocked<T>();
-            if (_deferDepth > 0) { _commands.Add(AddIdCmd.Rent(entity, (Id)ent)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, (Id)ent)); return; }
             EnsureHasIdLocked(entity, ent);
         }
     }
@@ -667,7 +701,7 @@ public sealed partial class World
             var rel = GetOrRegisterAnyLocked<TR>();
             var tgt = GetOrRegisterAnyLocked<TT>();
             var pair = Id.MakePair(rel, tgt);
-            if (_deferDepth > 0) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
             EnsureHasIdLocked(entity, pair);
         }
     }
@@ -678,7 +712,7 @@ public sealed partial class World
         lock (_lock)
         {
             var pair = Id.MakePair(relation, target);
-            if (_deferDepth > 0) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
             EnsureHasIdLocked(entity, pair);
         }
     }
@@ -687,7 +721,7 @@ public sealed partial class World
     {
         lock (_lock)
         {
-            if (_deferDepth > 0) { _commands.Add(AddIdCmd.Rent(entity, componentId)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, componentId)); return; }
             EnsureHasIdLocked(entity, componentId);
         }
     }
@@ -697,7 +731,7 @@ public sealed partial class World
         lock (_lock)
         {
             if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return;
-            if (_deferDepth > 0) { _commands.Add(RemoveIdCmd.Rent(entity, (Id)compEnt)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, (Id)compEnt)); return; }
             RemoveIdLocked(entity, (Id)compEnt);
         }
     }
@@ -709,7 +743,7 @@ public sealed partial class World
             if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return;
             if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return;
             var pair = Id.MakePair(rel, tgt);
-            if (_deferDepth > 0) { _commands.Add(RemoveIdCmd.Rent(entity, pair)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, pair)); return; }
             RemoveIdLocked(entity, pair);
         }
     }
@@ -718,22 +752,92 @@ public sealed partial class World
     {
         lock (_lock)
         {
-            if (_deferDepth > 0) { _commands.Add(RemoveIdCmd.Rent(entity, componentId)); return; }
+            if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, componentId)); return; }
             RemoveIdLocked(entity, componentId);
         }
     }
 
-    // Toggle helpers — convenience over Add/Remove. NOT a true bitset: each
-    // call still triggers archetype migration, so toggles fragment archetypes.
-    // True non-fragmenting bitset storage NYI.
+    // Toggle / SetEnabled / IsEnabled
+    //
+    // Two semantics, dispatched by CanToggle trait on the id:
+    //
+    //   Without CanToggle (default): legacy Add/Remove. Each call triggers an
+    //   archetype migration. Use for tags or rarely-toggled state.
+    //
+    //   With CanToggle (MarkCanToggle<T>()): non-fragmenting bitset. Toggle
+    //   flips the parallel-bit; the component stays present in the table, its
+    //   value is preserved across disable→enable, and queries skip rows whose
+    //   required terms are disabled. No archetype migration.
+    //
+    // For CanToggle ids, the component must already be Add'd before flipping
+    // — Toggle / SetEnabled on a missing component first Adds it (entering
+    // enabled state), so a subsequent SetEnabled(false) lands in 'present but
+    // disabled'. Mirrors flecs ecs_enable_id / ecs_is_enabled_id.
     public void Toggle<T>(EntityId entity) where T : struct
     {
+        lock (_lock)
+        {
+            if (_typeToEntity.TryGetValue(typeof(T), out var compEnt)
+                && _canToggleIds.Contains(compEnt.Id))
+            {
+                ToggleBitLocked(entity, compEnt, (Id)compEnt);
+                return;
+            }
+        }
         if (Has<T>(entity)) Remove<T>(entity);
         else Add<T>(entity);
     }
+
     public void SetEnabled<T>(EntityId entity, bool enabled) where T : struct
     {
+        lock (_lock)
+        {
+            if (_typeToEntity.TryGetValue(typeof(T), out var compEnt)
+                && _canToggleIds.Contains(compEnt.Id))
+            {
+                SetBitLocked(entity, compEnt, (Id)compEnt, enabled);
+                return;
+            }
+        }
         if (enabled) { if (!Has<T>(entity)) Add<T>(entity); }
         else { if (Has<T>(entity)) Remove<T>(entity); }
+    }
+
+    public bool IsEnabled<T>(EntityId entity) where T : struct
+    {
+        if (!IsAlive(entity)) return false;
+        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
+        var compId = (Id)compEnt;
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        if (!t.Has(compId)) return false;
+        // Non-CanToggle: presence == enabled.
+        if (!_canToggleIds.Contains(compEnt.Id)) return true;
+        int idx = t.IndexOf(compId);
+        var bs = t.Bits[idx];
+        return bs == null || bs.Get(rec.Row);
+    }
+
+    private void ToggleBitLocked(EntityId entity, EntityId compEnt, Id compId)
+    {
+        EnsureHasIdLocked(entity, compId);
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        int idx = t.IndexOf(compId);
+        var bs = t.Bits[idx]!;
+        bs.Set(rec.Row, !bs.Get(rec.Row));
+        t.Version++;
+    }
+
+    private void SetBitLocked(EntityId entity, EntityId compEnt, Id compId, bool enabled)
+    {
+        EnsureHasIdLocked(entity, compId);
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        int idx = t.IndexOf(compId);
+        var bs = t.Bits[idx]!;
+        if (bs.Get(rec.Row) == enabled) return;
+        bs.Set(rec.Row, enabled);
+        t.Version++;
     }
 }
