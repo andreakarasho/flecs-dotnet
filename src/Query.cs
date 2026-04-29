@@ -357,9 +357,10 @@ public abstract class QueryBase
     private Dictionary<int, int>? _lastVersion;
 
     // True iff matching considers anything beyond literal Self for any term.
-    // Used by Run/enum guards to decide whether per-table inheritance checks
-    // are needed.
-    internal bool _anyInheritance => _inherited || (_termTraversals != null && _termTraversals.Count > 0);
+    // Cached (not a computed property) so hot loops can branch on a single
+    // field load rather than re-evaluating the dict null-check + count.
+    // Updated by SetInherited / SetTermTraversal / SetCascade.
+    internal bool _anyInheritance;
 
     protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
@@ -368,13 +369,17 @@ public abstract class QueryBase
     protected void AddWith(Id id) { _with = QueryUtil.AppendSorted(_with, id); Reset(); }
     protected void AddWithout(Id id) { _without = QueryUtil.AppendSorted(_without, id); Reset(); }
     protected void AddOr(Id[] group) { (_orGroups ??= new List<Id[]>()).Add(group); Reset(); }
-    protected void SetInherited() { if (!_inherited) { _inherited = true; Reset(); } }
+    protected void SetInherited()
+    {
+        if (!_inherited) { _inherited = true; _anyInheritance = true; Reset(); }
+    }
 
     // Add per-term traversal override. Wins over _inherited for this term.
     protected void SetTermTraversal(Id id, uint relation, int maxDepth)
     {
         _termTraversals ??= new Dictionary<Id, TermTraversal>();
         _termTraversals[id] = new TermTraversal { Relation = relation, MaxDepth = maxDepth };
+        _anyInheritance = true;
         Reset();
     }
 
