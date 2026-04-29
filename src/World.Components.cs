@@ -217,8 +217,12 @@ public sealed partial class World
     }
 
     // Lookup helper — return null if no subscribers (hot path optimization).
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IdHooks? GetIdHooks(Id id)
-        => _idHooks.TryGetValue(id, out var ih) ? ih : null;
+    {
+        if (_idHooks.Count == 0) return null;
+        return _idHooks.TryGetValue(id, out var ih) ? ih : null;
+    }
 
     // ===== Multi-term observers (filter-style) =====
 
@@ -263,8 +267,14 @@ public sealed partial class World
 
     // Called from event-firing sites after single-id hooks. Walks the trigger
     // observer list, checks remaining terms via Has (Self+Up), dispatches.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DispatchMultiObsLocked(Event evt, EntityId entity, Id triggerId)
     {
+        // Hot-path bypass: when no multi-observers are registered, skip the
+        // dict hash entirely. Set/Add/Remove fire this on every component
+        // event; the dict.TryGetValue cost was measurable during entity
+        // setup-heavy workloads.
+        if (_multiObsByTrigger.Count == 0) return;
         if (!_multiObsByTrigger.TryGetValue((evt, triggerId), out var list)) return;
         for (int i = 0; i < list.Count; i++)
         {
