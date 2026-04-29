@@ -638,8 +638,10 @@ public sealed partial class World
         => FindInChain(start, id, IsA.Id, blockable: true);
 
     // Generalized chain walk via arbitrary relation. blockable=true honors
-    // DontInherit (short-circuits ancestor expansion). Uses pooled scratch.
-    private (bool found, Table? table, int row) FindInChain(EntityId start, Id id, uint relUint, bool blockable)
+    // DontInherit (short-circuits ancestor expansion). maxDepth caps the
+    // BFS — 0 = self-only, 1 = direct neighbors, -1 = unlimited. Uses
+    // pooled scratch.
+    internal (bool found, Table? table, int row) FindInChain(EntityId start, Id id, uint relUint, bool blockable, int maxDepth = -1)
     {
         bool block = blockable && IsIdDontInherit(id);
 
@@ -648,23 +650,30 @@ public sealed partial class World
         {
             visited.Add(start.Id);
             queue.Enqueue(start);
+            int depth = 0;
             while (queue.Count > 0)
             {
-                var cur = queue.Dequeue();
-                if (!IsAlive(cur)) continue;
-                ref var rec = ref GetSlot(cur.Id);
-                var t = _tablesById[rec.TableId]!;
-                if (t.Has(id)) return (true, t, rec.Row);
-                if (block) continue;
-                for (int i = 0; i < t.ComponentIds.Length; i++)
+                int levelSize = queue.Count;
+                for (int li = 0; li < levelSize; li++)
                 {
-                    var cid = t.ComponentIds[i];
-                    if (!cid.IsPair || cid.Relation != relUint) continue;
-                    uint tgt = cid.Target;
-                    if (tgt == 0 || !visited.Add(tgt)) continue;
-                    ref var ts = ref GetSlot(tgt);
-                    queue.Enqueue(new EntityId(tgt, ts.Generation));
+                    var cur = queue.Dequeue();
+                    if (!IsAlive(cur)) continue;
+                    ref var rec = ref GetSlot(cur.Id);
+                    var t = _tablesById[rec.TableId]!;
+                    if (t.Has(id)) return (true, t, rec.Row);
+                    if (block) continue;
+                    if (maxDepth >= 0 && depth >= maxDepth) continue;
+                    for (int i = 0; i < t.ComponentIds.Length; i++)
+                    {
+                        var cid = t.ComponentIds[i];
+                        if (!cid.IsPair || cid.Relation != relUint) continue;
+                        uint tgt = cid.Target;
+                        if (tgt == 0 || !visited.Add(tgt)) continue;
+                        ref var ts = ref GetSlot(tgt);
+                        queue.Enqueue(new EntityId(tgt, ts.Generation));
+                    }
                 }
+                depth++;
             }
             return (false, null, 0);
         }

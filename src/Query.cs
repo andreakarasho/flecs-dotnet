@@ -221,6 +221,15 @@ public delegate void IterAction<T1, T2, T3, T4, T5, T6>(in Iter<T1, T2, T3, T4, 
 // QueryBase — shared infrastructure: signature, table-cache, change detection,
 // Or-group support. Concrete typed Query<T...> derive.
 // ============================================================================
+// Per-term traversal config. When a term has an entry, matching/source
+// resolution walks the configured relation chain. Default for an absent
+// term: literal Self. Mirrors flecs term src/trav/depth.
+internal struct TermTraversal
+{
+    public uint Relation;   // relation entity id to walk (IsA / ChildOf / custom)
+    public int MaxDepth;    // -1 = unlimited, 1 = direct only (Parent), etc.
+}
+
 public abstract class QueryBase
 {
     internal readonly World _world;
@@ -234,7 +243,15 @@ public abstract class QueryBase
     // the ancestor archetype. Run/Iter remain literal — inherited-only tables
     // are skipped at Run time. Mirrors flecs query inheritance semantics.
     protected internal bool _inherited;
+    // Per-term traversal overrides. An entry wins over _inherited for that
+    // specific term; absent entries fall back to _inherited (IsA) or literal.
+    internal Dictionary<Id, TermTraversal>? _termTraversals;
     private Dictionary<int, int>? _lastVersion;
+
+    // True iff matching considers anything beyond literal Self for any term.
+    // Used by Run/enum guards to decide whether per-table inheritance checks
+    // are needed.
+    internal bool _anyInheritance => _inherited || (_termTraversals != null && _termTraversals.Count > 0);
 
     protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
@@ -245,15 +262,24 @@ public abstract class QueryBase
     protected void AddOr(Id[] group) { (_orGroups ??= new List<Id[]>()).Add(group); Reset(); }
     protected void SetInherited() { if (!_inherited) { _inherited = true; Reset(); } }
 
+    // Add per-term traversal override. Wins over _inherited for this term.
+    protected void SetTermTraversal(Id id, uint relation, int maxDepth)
+    {
+        _termTraversals ??= new Dictionary<Id, TermTraversal>();
+        _termTraversals[id] = new TermTraversal { Relation = relation, MaxDepth = maxDepth };
+        Reset();
+    }
+
     protected internal void Rematch()
     {
         var tables = _world._tablesById;
+        var worldForInherit = _anyInheritance ? _world : null;
         for (int i = _matchedUpTo + 1; i < tables.Count; i++)
         {
             var t = tables[i];
             if (t == null) continue;
             if (QueryUtil.Matches(t, _with, _without, _orGroups, _world.Wildcard.Id,
-                    _inherited ? _world : null))
+                    worldForInherit, _inherited, _termTraversals))
                 _matched.Add(t);
         }
         _matchedUpTo = tables.Count - 1;
@@ -298,9 +324,19 @@ public abstract class QueryBase
     internal (Column<T>? col, int sharedRow) ResolveSource<T>(Table t, Id id) where T : struct
     {
         if (t.Has(id)) return ((Column<T>?)t.Columns[t.IndexOf(id)], -1);
-        if (_inherited && t.Count > 0)
+        if (t.Count == 0) return (null, -1);
+        var seed = t.Entities[0];
+        // Per-term override wins; else fall back to query-wide IsA inheritance.
+        if (_termTraversals != null && _termTraversals.TryGetValue(id, out var trv))
         {
-            var seed = t.Entities[0];
+            var (found, src, row) = _world.FindInChain(seed, id, trv.Relation,
+                blockable: true, maxDepth: trv.MaxDepth);
+            if (found && src != null && src.Has(id))
+                return ((Column<T>?)src.Columns[src.IndexOf(id)], row);
+            return (null, -1);
+        }
+        if (_inherited)
+        {
             var (found, src, row) = _world.FindInIsAChain(seed, id);
             if (found && src != null && src.Has(id))
                 return ((Column<T>?)src.Columns[src.IndexOf(id)], row);
@@ -311,14 +347,17 @@ public abstract class QueryBase
 
 internal static class QueryUtil
 {
-    // worldForInherit non-null enables Self+Up(IsA) matching for 'with' terms:
-    // a table missing a term directly still matches if any entity in the table
-    // can reach the term via IsA. Without/Or stay literal (Self-only).
+    // worldForInherit non-null enables Self+Up matching for 'with' / 'or' terms.
+    // inheritedDefault=true → terms without explicit traversal walk IsA.
+    // termTraversals provides per-term overrides (relation + maxDepth).
+    // Without stays literal (Self-only) — flecs parity.
     public static bool Matches(Table t, Id[] with, Id[] without, List<Id[]>? orGroups, uint wildcard,
-        World? worldForInherit = null)
+        World? worldForInherit = null, bool inheritedDefault = false,
+        Dictionary<Id, TermTraversal>? termTraversals = null)
     {
         for (int i = 0; i < with.Length; i++)
-            if (!MatchesIdOrInherited(t, with[i], wildcard, worldForInherit)) return false;
+            if (!MatchesIdOrInherited(t, with[i], wildcard, worldForInherit, inheritedDefault, termTraversals))
+                return false;
         for (int i = 0; i < without.Length; i++)
             if (MatchesId(t, without[i], wildcard)) return false;
         if (orGroups != null)
@@ -328,23 +367,35 @@ internal static class QueryUtil
                 var group = orGroups[g];
                 bool any = false;
                 for (int i = 0; i < group.Length; i++)
-                    if (MatchesIdOrInherited(t, group[i], wildcard, worldForInherit)) { any = true; break; }
+                    if (MatchesIdOrInherited(t, group[i], wildcard, worldForInherit, inheritedDefault, termTraversals))
+                    { any = true; break; }
                 if (!any) return false;
             }
         }
         return true;
     }
 
-    // Self-or-Up matcher. Falls back to FindInIsAChain when literal miss.
-    // Empty tables can't satisfy via inheritance (no entity to seed the walk),
-    // which is fine: empty tables are skipped during iteration anyway.
-    private static bool MatchesIdOrInherited(Table t, Id id, uint wildcard, World? worldForInherit)
+    // Self-or-Up matcher. Per-term traversal wins over inheritedDefault.
+    // Empty tables can't satisfy via inheritance — skipped at iteration anyway.
+    private static bool MatchesIdOrInherited(Table t, Id id, uint wildcard,
+        World? worldForInherit, bool inheritedDefault,
+        Dictionary<Id, TermTraversal>? termTraversals)
     {
         if (MatchesId(t, id, wildcard)) return true;
         if (worldForInherit == null || t.Count == 0) return false;
         var seed = t.Entities[0];
-        var (found, _, _) = worldForInherit.FindInIsAChain(seed, id);
-        return found;
+        if (termTraversals != null && termTraversals.TryGetValue(id, out var trv))
+        {
+            var (found, _, _) = worldForInherit.FindInChain(seed, id, trv.Relation,
+                blockable: true, maxDepth: trv.MaxDepth);
+            return found;
+        }
+        if (inheritedDefault)
+        {
+            var (found, _, _) = worldForInherit.FindInIsAChain(seed, id);
+            return found;
+        }
+        return false;
     }
 
     // Matches a single Id (handles pair wildcards). For non-wildcard ids
@@ -440,6 +491,16 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     // enumerators stay literal — inherited-only tables are skipped there.
     public Query<T1> Inherited() { SetInherited(); return this; }
 
+    // Per-term traversal (Self+Up). Up<T>() walks IsA chain (default).
+    // Up<T>(rel) walks any relation. Parent<T>() = direct parent only via
+    // ChildOf. Mirrors flecs term src=Up/Parent with optional trav relation.
+    public Query<T1> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+
     // Foreach-iterable. Yields Row<T1>, no delegate dispatch.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1> GetEnumerator() => new(this);
@@ -473,7 +534,7 @@ public sealed class Query<T1> : QueryBase where T1 : struct
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && !t.Has(_c1)) continue;
+            if (_anyInheritance && !t.Has(_c1)) continue;
             var it = new Iter<T1>(_world, t, _c1);
             action(in it);
         }
@@ -524,6 +585,13 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
 
     public Query<T1, T2> Inherited() { SetInherited(); return this; }
 
+    public Query<T1, T2> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1, T2> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1, T2> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2> GetEnumerator() => new(this);
 
@@ -568,7 +636,7 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && (!t.Has(_c1) || !t.Has(_c2))) continue;
+            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2))) continue;
             var it = new Iter<T1, T2>(_world, t, _c1, _c2);
             action(in it);
         }
@@ -618,6 +686,13 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
 
     public Query<T1, T2, T3> Inherited() { SetInherited(); return this; }
 
+    public Query<T1, T2, T3> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1, T2, T3> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1, T2, T3> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3> GetEnumerator() => new(this);
 
@@ -665,7 +740,7 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3))) continue;
+            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3))) continue;
             var it = new Iter<T1, T2, T3>(_world, t, _c1, _c2, _c3);
             action(in it);
         }
@@ -708,6 +783,13 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
     public Query<T1, T2, T3, T4> Inherited() { SetInherited(); return this; }
+
+    public Query<T1, T2, T3, T4> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1, T2, T3, T4> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1, T2, T3, T4> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4> GetEnumerator() => new(this);
@@ -754,7 +836,7 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4))) continue;
+            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4))) continue;
             var it = new Iter<T1, T2, T3, T4>(_world, t, _c1, _c2, _c3, _c4);
             action(in it);
         }
@@ -790,6 +872,13 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
 
     public Query<T1, T2, T3, T4, T5> Inherited() { SetInherited(); return this; }
+
+    public Query<T1, T2, T3, T4, T5> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1, T2, T3, T4, T5> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1, T2, T3, T4, T5> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4, T5> GetEnumerator() => new(this);
@@ -838,7 +927,7 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4) || !t.Has(_c5))) continue;
+            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4) || !t.Has(_c5))) continue;
             var it = new Iter<T1, T2, T3, T4, T5>(_world, t, _c1, _c2, _c3, _c4, _c5);
             action(in it);
         }
@@ -872,6 +961,13 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
     public Query<T1, T2, T3, T4, T5, T6> Without(Id id) { AddWithout(id); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6> Inherited() { SetInherited(); return this; }
+
+    public Query<T1, T2, T3, T4, T5, T6> Up<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Up<T>(EntityId relation) where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), relation.Id, -1); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Parent<T>() where T : struct
+    { SetTermTraversal(_world.IdOf<T>(), _world.ChildOf.Id, 1); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TableEnumerator<T1, T2, T3, T4, T5, T6> GetEnumerator() => new(this);
@@ -923,7 +1019,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_inherited && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3)
+            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3)
                             || !t.Has(_c4) || !t.Has(_c5) || !t.Has(_c6))) continue;
             var it = new Iter<T1, T2, T3, T4, T5, T6>(_world, t, _c1, _c2, _c3, _c4, _c5, _c6);
             action(in it);

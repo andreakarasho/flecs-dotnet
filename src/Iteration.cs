@@ -79,7 +79,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._inherited && !t.Has(_query._c1)) continue;
+            if (_query._anyInheritance && !t.Has(_query._c1)) continue;
             var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
             _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
             _count = n;
@@ -159,7 +159,7 @@ public ref struct RowEnumerator<T1, T2>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
             var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
             var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
             _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
@@ -242,7 +242,7 @@ public ref struct RowEnumerator<T1, T2, T3>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
             var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
             var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
             var col3 = (Column<T3>)t.Columns[t.IndexOf(_query._c3)]!;
@@ -324,7 +324,7 @@ public ref struct TableEnumerator<T1> where T1 : struct
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && !t.Has(_query._c1)) continue;
+            if (_query._anyInheritance && !t.Has(_query._c1)) continue;
             _current = new Iter<T1>(_query._world, t, _query._c1);
             return true;
         }
@@ -376,7 +376,7 @@ public ref struct TableEnumerator<T1, T2>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
             _current = new Iter<T1, T2>(_query._world, t, _query._c1, _query._c2);
             return true;
         }
@@ -429,7 +429,7 @@ public ref struct TableEnumerator<T1, T2, T3>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
             _current = new Iter<T1, T2, T3>(_query._world, t, _query._c1, _query._c2, _query._c3);
             return true;
         }
@@ -482,7 +482,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2)
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2)
                                    || !t.Has(_query._c3) || !t.Has(_query._c4))) continue;
             _current = new Iter<T1, T2, T3, T4>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4);
             return true;
@@ -536,7 +536,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
                                    || !t.Has(_query._c4) || !t.Has(_query._c5))) continue;
             _current = new Iter<T1, T2, T3, T4, T5>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4, _query._c5);
             return true;
@@ -590,7 +590,7 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5, T6>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._inherited && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
                                    || !t.Has(_query._c4) || !t.Has(_query._c5) || !t.Has(_query._c6))) continue;
             _current = new Iter<T1, T2, T3, T4, T5, T6>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4, _query._c5, _query._c6);
             return true;
