@@ -13,11 +13,6 @@ class Program
             foreach (var (p, v) in q.Rows()) { p.Value.X *= v.Value.Dx; p.Value.Y *= v.Value.Dy; }
     }
 
-    static void RunQueryShared(Query<Position, Velocity> q)
-    {
-        for (int iter = 0; iter < 3600; iter++)
-            foreach (var (p, v) in q.SharedRows()) { p.Value.X *= v.Value.Dx; p.Value.Y *= v.Value.Dy; }
-    }
 
     static void Main()
     {
@@ -62,13 +57,13 @@ class Program
         }
         var qi = w2.Query<Position, Velocity>().Up<Position>();
 
-        for (int i = 0; i < 3; i++) RunQueryShared(qi);
+        for (int i = 0; i < 3; i++) RunQuery(qi);
 
-        Console.WriteLine($"== Inherited SharedRowEnumerator (Position shared) — N={N:N0}, 3600 iters x 5 runs ==");
+        Console.WriteLine($"== Inherited RowEnumerator (Position shared) — N={N:N0}, 3600 iters x 5 runs ==");
         for (int run = 0; run < 5; run++)
         {
             var sw = Stopwatch.StartNew();
-            RunQueryShared(qi);
+            RunQuery(qi);
             sw.Stop();
             long ops = (long)N * 3600;
             double mops = ops / sw.Elapsed.TotalSeconds / 1_000_000.0;

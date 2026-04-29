@@ -666,9 +666,6 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     // Parent<T>() / Cascade<T>() and you want per-row Ptr<T>. ~2x slower than
     // Rows() on own-only data due to variable per-term stride; pick whichever
     // matches your query shape.
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1> SharedRows() => new(this);
-
     public void Each(EachAction<T1> action)
     {
         using var _ = _world.Defer();
@@ -771,9 +768,6 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2> Rows() => new(this);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1, T2> SharedRows() => new(this);
 
     public void Each(EachAction<T1, T2> action)
     {
@@ -889,9 +883,6 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3> Rows() => new(this);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1, T2, T3> SharedRows() => new(this);
 
     public void Each(EachAction<T1, T2, T3> action)
     {

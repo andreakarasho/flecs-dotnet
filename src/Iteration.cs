@@ -23,32 +23,36 @@ public ref struct Ptr<T> where T : struct
     public ref T Value;
 }
 
-// RowEnumerator is the per-row foreach path. It uses constant +1 pointer
-// advances so the JIT bakes the stride into a literal, which is essential
-// for the tight inner loop. As a consequence it does NOT support inherited
-// (shared) terms — those would need a variable stride and cost ~2x.
-// For inherited queries use Each / Run / TableEnumerator instead;
-// inherited-only tables are silently skipped here.
+// RowEnumerator — per-row foreach. Single API for both own-only and inherited
+// queries; behavior selected by a ctor-cached `_hasInherit` flag so the JIT
+// generates two distinct basic blocks. The own-only block keeps constant-+1
+// pointer advance for full baseline perf; the inherited block uses per-term
+// stride (1=own, 0=shared/broadcast) to support Up<T>/Parent<T>/Cascade<T>/
+// Inherited().
 public ref struct RowEnumerator<T1> where T1 : struct
 {
     private readonly Query<T1> _query;
+    private readonly bool _hasInherit;
     private DeferScope _defer;
     private int _tableIdx;
     private int _rowIdx;
     private int _count;
     private bool _disposed;
     private Ptr<T1> _ptr1;
+    private int _stride1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RowEnumerator(Query<T1> q)
     {
         _query = q;
+        _hasInherit = q._anyInheritance;
         _defer = q._world.Defer();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
+        _stride1 = 1;
     }
 
     public Ptr<T1> Component1
@@ -56,6 +60,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _ptr1;
     }
+    public bool IsShared1 => _stride1 == 0;
 
     public RowEnumerator<T1> Current
     {
@@ -68,7 +73,10 @@ public ref struct RowEnumerator<T1> where T1 : struct
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+            if (!_hasInherit)
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+            else
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
             return true;
         }
         return MoveNextSlow();
@@ -85,9 +93,18 @@ public ref struct RowEnumerator<T1> where T1 : struct
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._anyInheritance && !t.Has(_query._c1)) continue;
-            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
-            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
+            if (!_hasInherit)
+            {
+                var c = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+                _ptr1.Value = ref MemoryMarshal.GetReference(c.AsSpan());
+            }
+            else
+            {
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                if (col1 == null) continue;
+                if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
+                else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
+            }
             _count = n;
             _rowIdx = 0;
             return true;
@@ -111,6 +128,7 @@ public ref struct RowEnumerator<T1, T2>
     where T1 : struct where T2 : struct
 {
     private readonly Query<T1, T2> _query;
+    private readonly bool _hasInherit;   // ctor-cached: enables shared-stride path
     private DeferScope _defer;
     private int _tableIdx;
     private int _rowIdx;
@@ -118,18 +136,21 @@ public ref struct RowEnumerator<T1, T2>
     private bool _disposed;
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
+    private int _stride1, _stride2;
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RowEnumerator(Query<T1, T2> q)
     {
         _query = q;
+        _hasInherit = q._anyInheritance;
         _defer = q._world.Defer();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
+        _stride1 = 1; _stride2 = 1;
     }
 
 
@@ -139,6 +160,9 @@ public ref struct RowEnumerator<T1, T2>
         get => this;
     }
 
+    public bool IsShared1 => _stride1 == 0;
+    public bool IsShared2 => _stride2 == 0;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b) { a = _ptr1; b = _ptr2; }
 
@@ -147,8 +171,20 @@ public ref struct RowEnumerator<T1, T2>
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
+            // Branch on a ctor-cached readonly field. For the common own-only
+            // case the JIT keeps the constant-+1 pointer advance, matching
+            // the original baseline codegen. The inherited path is a separate
+            // basic block reached only when the query opted into inheritance.
+            if (!_hasInherit)
+            {
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+                _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
+            }
+            else
+            {
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
+                _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
+            }
             return true;
         }
         return MoveNextSlow();
@@ -165,11 +201,23 @@ public ref struct RowEnumerator<T1, T2>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
-            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
-            var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
-            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
-            _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan());
+            if (!_hasInherit)
+            {
+                var c1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+                var c2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
+                _ptr1.Value = ref MemoryMarshal.GetReference(c1.AsSpan());
+                _ptr2.Value = ref MemoryMarshal.GetReference(c2.AsSpan());
+            }
+            else
+            {
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+                if (col1 == null || col2 == null) continue;
+                if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
+                else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
+                if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
+                else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
+            }
             _count = n;
             _rowIdx = 0;
             return true;
@@ -193,6 +241,7 @@ public ref struct RowEnumerator<T1, T2, T3>
     where T1 : struct where T2 : struct where T3 : struct
 {
     private readonly Query<T1, T2, T3> _query;
+    private readonly bool _hasInherit;
     private DeferScope _defer;
     private int _tableIdx;
     private int _rowIdx;
@@ -201,17 +250,20 @@ public ref struct RowEnumerator<T1, T2, T3>
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
     private Ptr<T3> _ptr3;
+    private int _stride1, _stride2, _stride3;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RowEnumerator(Query<T1, T2, T3> q)
     {
         _query = q;
+        _hasInherit = q._anyInheritance;
         _defer = q._world.Defer();
         q.Rematch();
         _tableIdx = -1;
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
+        _stride1 = 1; _stride2 = 1; _stride3 = 1;
     }
 
     public RowEnumerator<T1, T2, T3> Current
@@ -219,6 +271,9 @@ public ref struct RowEnumerator<T1, T2, T3>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this;
     }
+    public bool IsShared1 => _stride1 == 0;
+    public bool IsShared2 => _stride2 == 0;
+    public bool IsShared3 => _stride3 == 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c)
@@ -229,9 +284,18 @@ public ref struct RowEnumerator<T1, T2, T3>
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
-            _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, 1);
+            if (!_hasInherit)
+            {
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+                _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
+                _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, 1);
+            }
+            else
+            {
+                _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
+                _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
+                _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, _stride3);
+            }
             return true;
         }
         return MoveNextSlow();
@@ -248,14 +312,28 @@ public ref struct RowEnumerator<T1, T2, T3>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            if (_query._anyInheritance
-                && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
-            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
-            var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
-            var col3 = (Column<T3>)t.Columns[t.IndexOf(_query._c3)]!;
-            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
-            _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan());
-            _ptr3.Value = ref MemoryMarshal.GetReference(col3.AsSpan());
+            if (!_hasInherit)
+            {
+                var c1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+                var c2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
+                var c3 = (Column<T3>)t.Columns[t.IndexOf(_query._c3)]!;
+                _ptr1.Value = ref MemoryMarshal.GetReference(c1.AsSpan());
+                _ptr2.Value = ref MemoryMarshal.GetReference(c2.AsSpan());
+                _ptr3.Value = ref MemoryMarshal.GetReference(c3.AsSpan());
+            }
+            else
+            {
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+                var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+                if (col1 == null || col2 == null || col3 == null) continue;
+                if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
+                else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
+                if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
+                else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
+                if (s3 < 0) { _ptr3.Value = ref MemoryMarshal.GetReference(col3.AsSpan()); _stride3 = 1; }
+                else { _ptr3.Value = ref col3.GetRef(s3); _stride3 = 0; }
+            }
             _count = n;
             _rowIdx = 0;
             return true;
@@ -264,269 +342,6 @@ public ref struct RowEnumerator<T1, T2, T3>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3> GetEnumerator() => this;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _query.MarkObservedInternal();
-        _defer.Dispose();
-    }
-}
-
-// ============================================================================
-// SharedRowEnumerator<T...> — like RowEnumerator but supports inherited
-// (shared) terms. Each term carries a per-table stride: 1 = own column
-// (advance per row), 0 = shared (single ancestor cell broadcast to every
-// matched row). Variable-stride costs ~2x vs RowEnumerator on own-only
-// queries; opt-in via Query.SharedRows() rather than Query.Rows() so
-// vanilla foreach hot loops keep their constant-+1-stride codegen.
-//
-//   foreach (var (p, v) in world.Query<Position, Velocity>()
-//                                .Up<Position>().SharedRows())
-//   { p.Value.X *= v.Value.Dx; }
-// ============================================================================
-
-public ref struct SharedRowEnumerator<T1> where T1 : struct
-{
-    private readonly Query<T1> _query;
-    private DeferScope _defer;
-    private int _tableIdx;
-    private int _rowIdx;
-    private int _count;
-    private bool _disposed;
-    private Ptr<T1> _ptr1;
-    private int _stride1;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal SharedRowEnumerator(Query<T1> q)
-    {
-        _query = q;
-        _defer = q._world.Defer();
-        q.Rematch();
-        _tableIdx = -1; _rowIdx = -1; _count = 0; _disposed = false;
-        _stride1 = 1;
-    }
-
-    public Ptr<T1> Component1
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _ptr1;
-    }
-    public bool IsShared1 => _stride1 == 0;
-
-    public SharedRowEnumerator<T1> Current
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool MoveNext()
-    {
-        if (++_rowIdx < _count)
-        {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
-            return true;
-        }
-        return MoveNextSlow();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool MoveNextSlow()
-    {
-        var matched = CollectionsMarshal.AsSpan(_query._matched);
-        while (true)
-        {
-            _tableIdx++;
-            if (_tableIdx >= matched.Length) return false;
-            var t = matched[_tableIdx];
-            int n = t.Count;
-            if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            if (col1 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
-            _count = n;
-            _rowIdx = 0;
-            return true;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1> GetEnumerator() => this;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _query.MarkObservedInternal();
-        _defer.Dispose();
-    }
-}
-
-public ref struct SharedRowEnumerator<T1, T2>
-    where T1 : struct where T2 : struct
-{
-    private readonly Query<T1, T2> _query;
-    private DeferScope _defer;
-    private int _tableIdx, _rowIdx, _count;
-    private bool _disposed;
-    private Ptr<T1> _ptr1;
-    private Ptr<T2> _ptr2;
-    private int _stride1, _stride2;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal SharedRowEnumerator(Query<T1, T2> q)
-    {
-        _query = q;
-        _defer = q._world.Defer();
-        q.Rematch();
-        _tableIdx = -1; _rowIdx = -1; _count = 0; _disposed = false;
-        _stride1 = 1; _stride2 = 1;
-    }
-
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-
-    public SharedRowEnumerator<T1, T2> Current
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b) { a = _ptr1; b = _ptr2; }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool MoveNext()
-    {
-        if (++_rowIdx < _count)
-        {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
-            return true;
-        }
-        return MoveNextSlow();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool MoveNextSlow()
-    {
-        var matched = CollectionsMarshal.AsSpan(_query._matched);
-        while (true)
-        {
-            _tableIdx++;
-            if (_tableIdx >= matched.Length) return false;
-            var t = matched[_tableIdx];
-            int n = t.Count;
-            if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            if (col1 == null || col2 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
-            if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
-            else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
-            _count = n;
-            _rowIdx = 0;
-            return true;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1, T2> GetEnumerator() => this;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _query.MarkObservedInternal();
-        _defer.Dispose();
-    }
-}
-
-public ref struct SharedRowEnumerator<T1, T2, T3>
-    where T1 : struct where T2 : struct where T3 : struct
-{
-    private readonly Query<T1, T2, T3> _query;
-    private DeferScope _defer;
-    private int _tableIdx, _rowIdx, _count;
-    private bool _disposed;
-    private Ptr<T1> _ptr1;
-    private Ptr<T2> _ptr2;
-    private Ptr<T3> _ptr3;
-    private int _stride1, _stride2, _stride3;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal SharedRowEnumerator(Query<T1, T2, T3> q)
-    {
-        _query = q;
-        _defer = q._world.Defer();
-        q.Rematch();
-        _tableIdx = -1; _rowIdx = -1; _count = 0; _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1;
-    }
-
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-    public bool IsShared3 => _stride3 == 0;
-
-    public SharedRowEnumerator<T1, T2, T3> Current
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c)
-    { a = _ptr1; b = _ptr2; c = _ptr3; }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool MoveNext()
-    {
-        if (++_rowIdx < _count)
-        {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
-            _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, _stride3);
-            return true;
-        }
-        return MoveNextSlow();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool MoveNextSlow()
-    {
-        var matched = CollectionsMarshal.AsSpan(_query._matched);
-        while (true)
-        {
-            _tableIdx++;
-            if (_tableIdx >= matched.Length) return false;
-            var t = matched[_tableIdx];
-            int n = t.Count;
-            if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            if (col1 == null || col2 == null || col3 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
-            if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
-            else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
-            if (s3 < 0) { _ptr3.Value = ref MemoryMarshal.GetReference(col3.AsSpan()); _stride3 = 1; }
-            else { _ptr3.Value = ref col3.GetRef(s3); _stride3 = 0; }
-            _count = n;
-            _rowIdx = 0;
-            return true;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SharedRowEnumerator<T1, T2, T3> GetEnumerator() => this;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
