@@ -19,7 +19,7 @@ public sealed partial class World
         lock (_lock)
         {
             if (_deferDepth == 0)
-                throw new InvalidOperationException("EndDefer without matching BeginDefer.");
+                ThrowHelper.EndDeferWithoutBegin();
             _deferDepth--;
             if (_deferDepth > 0) return;
         }
@@ -528,19 +528,15 @@ public sealed partial class World
     public ref T Get<T>(EntityId entity) where T : struct
     {
         ref var rec = ref GetSlot(entity.Id);
-        if (!rec.Alive || rec.Generation != entity.Generation)
-            throw new InvalidOperationException("Entity is dead.");
-        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt))
-            throw new InvalidOperationException($"Component '{typeof(T).Name}' not registered.");
+        if (!rec.Alive || rec.Generation != entity.Generation) ThrowHelper.EntityDead();
+        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) ThrowHelper.ComponentNotRegistered(typeof(T));
         var compId = (Id)compEnt;
-        if (!_componentInfo.ContainsKey(compId))
-            throw new InvalidOperationException($"'{typeof(T).Name}' is a tag, has no data.");
+        if (!_componentInfo.ContainsKey(compId)) ThrowHelper.IsTagNotComponent(typeof(T));
         var table = _tablesById[rec.TableId]!;
         if (table.Has(compId))
             return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
         var (found, t, row) = FindInIsAChain(entity, compId);
-        if (!found)
-            throw new InvalidOperationException($"Entity does not have component '{typeof(T).Name}'.");
+        if (!found) ThrowHelper.EntityMissingComponent(typeof(T));
         return ref ((Column<T>)t!.Columns[t.IndexOf(compId)]!).GetRef(row);
     }
 

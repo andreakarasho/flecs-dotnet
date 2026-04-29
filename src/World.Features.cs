@@ -140,7 +140,7 @@ public sealed partial class World
     // entity handles. Hooks fire per entity.
     public EntityId[] BulkNew<T>(int count) where T : struct
     {
-        if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+        if (count < 0) ThrowHelper.NegativeCount(nameof(count));
         var result = new EntityId[count];
         if (count == 0) return result;
         lock (_lock)
@@ -195,7 +195,7 @@ public sealed partial class World
     public EntityId Clone(EntityId source)
     {
         if (!IsAlive(source))
-            throw new InvalidOperationException("Cannot clone dead entity.");
+            ThrowHelper.CannotCloneDeadEntity();
         lock (_lock)
         {
             var dst = CreateEntityCore();
@@ -536,18 +536,13 @@ public sealed partial class World
     // Throws if not found anywhere in the chain.
     public ref T GetInherited<T>(EntityId entity) where T : struct
     {
-        if (!IsAlive(entity))
-            throw new InvalidOperationException("Entity is dead.");
-        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt))
-            throw new InvalidOperationException($"Component '{typeof(T).Name}' not registered.");
+        if (!IsAlive(entity)) ThrowHelper.EntityDead();
+        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) ThrowHelper.ComponentNotRegistered(typeof(T));
         var compId = (Id)compEnt;
-        if (!_componentInfo.ContainsKey(compId))
-            throw new InvalidOperationException($"'{typeof(T).Name}' is a tag, has no data.");
+        if (!_componentInfo.ContainsKey(compId)) ThrowHelper.IsTagNotComponent(typeof(T));
 
         var (found, table, row) = FindInIsAChain(entity, compId);
-        if (!found)
-            throw new InvalidOperationException(
-                $"Component '{typeof(T).Name}' not found on entity #{entity.Id} or any IsA ancestor.");
+        if (!found) ThrowHelper.NotFoundInIsAChain(typeof(T), entity.Id);
         return ref ((Column<T>)table!.Columns[table.IndexOf(compId)]!).GetRef(row);
     }
 
@@ -592,17 +587,12 @@ public sealed partial class World
     // alive; behavior undefined otherwise.
     public ref T GetInheritedVia<T>(EntityId entity, EntityId relation) where T : struct
     {
-        if (!IsAlive(entity))
-            throw new InvalidOperationException("Entity is dead.");
-        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt))
-            throw new InvalidOperationException($"Component '{typeof(T).Name}' not registered.");
+        if (!IsAlive(entity)) ThrowHelper.EntityDead();
+        if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) ThrowHelper.ComponentNotRegistered(typeof(T));
         var compId = (Id)compEnt;
-        if (!_componentInfo.ContainsKey(compId))
-            throw new InvalidOperationException($"'{typeof(T).Name}' is a tag, has no data.");
+        if (!_componentInfo.ContainsKey(compId)) ThrowHelper.IsTagNotComponent(typeof(T));
         var (found, table, row) = FindInChain(entity, compId, relation.Id, blockable: false);
-        if (!found)
-            throw new InvalidOperationException(
-                $"Component '{typeof(T).Name}' not found via #{relation.Id} chain from #{entity.Id}.");
+        if (!found) ThrowHelper.NotFoundInRelationChain(typeof(T), relation.Id, entity.Id);
         return ref ((Column<T>)table!.Columns[table.IndexOf(compId)]!).GetRef(row);
     }
 

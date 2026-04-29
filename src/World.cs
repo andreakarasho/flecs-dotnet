@@ -396,9 +396,8 @@ public sealed partial class World
                         if (IsAliveCore(hSpan[i])) cascade.Enqueue(hSpan[i]);
                     break;
                 case DeletePolicy.Panic:
-                    throw new InvalidOperationException(
-                        $"DeletePolicy.Panic: deleting #{deletedId} would orphan id {id} on " +
-                        $"#{(hSpan.Length > 0 ? hSpan[0].Id : 0u)} (and possibly others).");
+                    ThrowHelper.DeletePolicyPanic(deletedId, id.Value, hSpan.Length > 0 ? hSpan[0].Id : 0u);
+                    break;
             }
         }
     }
@@ -426,9 +425,7 @@ public sealed partial class World
     {
         if (_typeToEntity.TryGetValue(typeof(T), out var ent))
         {
-            if (!_componentInfo.ContainsKey((Id)ent))
-                throw new InvalidOperationException(
-                    $"Type '{typeof(T).Name}' already registered as tag, not component.");
+            if (!_componentInfo.ContainsKey((Id)ent)) ThrowHelper.ComponentAlreadyTag(typeof(T));
             return ent;
         }
         ent = CreateEntityCore();
@@ -444,9 +441,7 @@ public sealed partial class World
     {
         if (_typeToEntity.TryGetValue(typeof(T), out var ent))
         {
-            if (_componentInfo.ContainsKey((Id)ent))
-                throw new InvalidOperationException(
-                    $"Type '{typeof(T).Name}' already registered as component, not tag.");
+            if (_componentInfo.ContainsKey((Id)ent)) ThrowHelper.TagAlreadyComponent(typeof(T));
             return ent;
         }
         ent = CreateEntityCore();
@@ -505,8 +500,7 @@ public sealed partial class World
     private void EnsureHasIdLocked(EntityId entity, Id compId)
     {
         ref var rec = ref GetSlot(entity.Id);
-        if (!rec.Alive || rec.Generation != entity.Generation)
-            throw new InvalidOperationException("Entity is dead.");
+        if (!rec.Alive || rec.Generation != entity.Generation) ThrowHelper.EntityDead();
         var src = _tablesById[rec.TableId]!;
         if (src.Has(compId)) return;
         // Trait enforcement on pairs.
@@ -516,18 +510,14 @@ public sealed partial class World
             uint tgtUint = compId.Target;
             // Final: cannot IsA-target an entity marked Final.
             if (relUint == IsA.Id && _finalIds.Contains(tgtUint))
-                throw new InvalidOperationException(
-                    $"Cannot IsA to entity #{tgtUint} marked Final.");
+                ThrowHelper.IsAToFinal(tgtUint);
             // Acyclic: target's chain must not include entity (and target
             // must not be entity itself).
             if (_acyclicRelIds.Contains(relUint))
             {
-                if (tgtUint == entity.Id)
-                    throw new InvalidOperationException(
-                        $"Acyclic relation #{relUint}: self-reference on #{entity.Id} forbidden.");
+                if (tgtUint == entity.Id) ThrowHelper.AcyclicSelfReference(relUint, entity.Id);
                 if (RelChainReachesLocked(tgtUint, entity.Id, relUint))
-                    throw new InvalidOperationException(
-                        $"Acyclic relation #{relUint}: cycle would form (#{entity.Id} → #{tgtUint}).");
+                    ThrowHelper.AcyclicCycle(relUint, entity.Id, tgtUint);
             }
             // Exclusive: drop any existing (relUint, *) pair before adding.
             if (_exclusiveRelIds.Contains(relUint))

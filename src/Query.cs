@@ -622,7 +622,7 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     public Query<T1> Optional<T>() where T : struct
     {
         if (typeof(T) != typeof(T1))
-            throw new ArgumentException($"Optional<{typeof(T).Name}>: T must be T1 of this query.");
+            ThrowHelper.OptionalTypeMismatch(typeof(T), "T1");
         if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); }
         return this;
     }
@@ -737,7 +737,7 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
         }
         else
         {
-            throw new ArgumentException($"Optional<{typeof(T).Name}>: T must be T1 or T2 of this query.");
+            ThrowHelper.OptionalTypeMismatch(typeof(T), "T1 or T2");
         }
         return this;
     }
@@ -853,7 +853,7 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
         if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } }
         else if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } }
         else if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } }
-        else throw new ArgumentException($"Optional<{typeof(T).Name}>: T must be T1, T2, or T3 of this query.");
+        else ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, or T3");
         return this;
     }
 
