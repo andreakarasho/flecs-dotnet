@@ -23,6 +23,12 @@ public ref struct Ptr<T> where T : struct
     public ref T Value;
 }
 
+// RowEnumerator is the per-row foreach path. It uses constant +1 pointer
+// advances so the JIT bakes the stride into a literal, which is essential
+// for the tight inner loop. As a consequence it does NOT support inherited
+// (shared) terms — those would need a variable stride and cost ~2x.
+// For inherited queries use Each / Run / TableEnumerator instead;
+// inherited-only tables are silently skipped here.
 public ref struct RowEnumerator<T1> where T1 : struct
 {
     private readonly Query<T1> _query;
@@ -32,10 +38,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
     private int _count;
     private bool _disposed;
     private Ptr<T1> _ptr1;
-    // Per-term advance stride. 1 = own column, 0 = shared (single value
-    // applied to every row). Loaded per MoveNext — small cost vs the old
-    // constant-1 advance, but lets shared inheritance work in foreach.
-    private int _stride1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RowEnumerator(Query<T1> q)
@@ -47,7 +49,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1;
     }
 
     public Ptr<T1> Component1
@@ -67,7 +68,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
+            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
             return true;
         }
         return MoveNextSlow();
@@ -84,10 +85,9 @@ public ref struct RowEnumerator<T1> where T1 : struct
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            if (col1 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
+            if (_query._anyInheritance && !t.Has(_query._c1)) continue;
+            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
             _count = n;
             _rowIdx = 0;
             return true;
@@ -118,7 +118,6 @@ public ref struct RowEnumerator<T1, T2>
     private bool _disposed;
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
-    private int _stride1, _stride2;
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -131,7 +130,6 @@ public ref struct RowEnumerator<T1, T2>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1;
     }
 
 
@@ -149,8 +147,8 @@ public ref struct RowEnumerator<T1, T2>
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
+            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
             return true;
         }
         return MoveNextSlow();
@@ -167,13 +165,11 @@ public ref struct RowEnumerator<T1, T2>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            if (col1 == null || col2 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
-            if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
-            else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
+            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
+            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+            var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
+            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
+            _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan());
             _count = n;
             _rowIdx = 0;
             return true;
@@ -205,7 +201,6 @@ public ref struct RowEnumerator<T1, T2, T3>
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
     private Ptr<T3> _ptr3;
-    private int _stride1, _stride2, _stride3;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RowEnumerator(Query<T1, T2, T3> q)
@@ -217,7 +212,6 @@ public ref struct RowEnumerator<T1, T2, T3>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1;
     }
 
     public RowEnumerator<T1, T2, T3> Current
@@ -235,9 +229,9 @@ public ref struct RowEnumerator<T1, T2, T3>
     {
         if (++_rowIdx < _count)
         {
-            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, _stride1);
-            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, _stride2);
-            _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, _stride3);
+            _ptr1.Value = ref Unsafe.Add(ref _ptr1.Value, 1);
+            _ptr2.Value = ref Unsafe.Add(ref _ptr2.Value, 1);
+            _ptr3.Value = ref Unsafe.Add(ref _ptr3.Value, 1);
             return true;
         }
         return MoveNextSlow();
@@ -254,16 +248,14 @@ public ref struct RowEnumerator<T1, T2, T3>
             var t = matched[_tableIdx];
             int n = t.Count;
             if (n == 0) continue;
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            if (col1 == null || col2 == null || col3 == null) continue;
-            if (s1 < 0) { _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan()); _stride1 = 1; }
-            else { _ptr1.Value = ref col1.GetRef(s1); _stride1 = 0; }
-            if (s2 < 0) { _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan()); _stride2 = 1; }
-            else { _ptr2.Value = ref col2.GetRef(s2); _stride2 = 0; }
-            if (s3 < 0) { _ptr3.Value = ref MemoryMarshal.GetReference(col3.AsSpan()); _stride3 = 1; }
-            else { _ptr3.Value = ref col3.GetRef(s3); _stride3 = 0; }
+            if (_query._anyInheritance
+                && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
+            var col1 = (Column<T1>)t.Columns[t.IndexOf(_query._c1)]!;
+            var col2 = (Column<T2>)t.Columns[t.IndexOf(_query._c2)]!;
+            var col3 = (Column<T3>)t.Columns[t.IndexOf(_query._c3)]!;
+            _ptr1.Value = ref MemoryMarshal.GetReference(col1.AsSpan());
+            _ptr2.Value = ref MemoryMarshal.GetReference(col2.AsSpan());
+            _ptr3.Value = ref MemoryMarshal.GetReference(col3.AsSpan());
             _count = n;
             _rowIdx = 0;
             return true;
