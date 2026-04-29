@@ -287,6 +287,8 @@ public sealed partial class World
     public void Delete(EntityId entity)
     {
         if (entity.Id == 0) return;
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(DeleteCmd.Rent(entity)); return; }
         lock (_lock)
         {
             if (ShouldQueueLocked())

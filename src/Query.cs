@@ -362,6 +362,43 @@ public abstract class QueryBase
     // Updated by SetInherited / SetTermTraversal / SetCascade.
     internal bool _anyInheritance;
 
+    // Read-only term ids. Default: every term in `_with` is a writer; ids
+    // here override to read-only. Used by the pipeline DAG to detect r/w
+    // conflicts between concurrent systems. Mirrors flecs term inout=In.
+    internal HashSet<Id>? _reads;
+
+    // Read-set as Id[] (allocated lazily for pipeline analysis).
+    public Id[] ReadIds
+    {
+        get
+        {
+            if (_reads == null || _reads.Count == 0) return Array.Empty<Id>();
+            var arr = new Id[_reads.Count];
+            int i = 0;
+            foreach (var id in _reads) arr[i++] = id;
+            Array.Sort(arr);
+            return arr;
+        }
+    }
+
+    // Write-set: every required term not flagged read.
+    public Id[] WriteIds
+    {
+        get
+        {
+            if (_reads == null || _reads.Count == 0) return _with;
+            var list = new List<Id>(_with.Length);
+            for (int i = 0; i < _with.Length; i++)
+                if (!_reads.Contains(_with[i])) list.Add(_with[i]);
+            return list.ToArray();
+        }
+    }
+
+    protected void MarkRead(Id id)
+    {
+        (_reads ??= new HashSet<Id>()).Add(id);
+    }
+
     protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
     protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); }
@@ -647,6 +684,11 @@ public sealed class Query<T1> : QueryBase where T1 : struct
     // enumerators stay literal — inherited-only tables are skipped there.
     public Query<T1> Inherited() { SetInherited(); return this; }
 
+    // Mark a term as read-only for r/w analysis (pipeline DAG). Default is
+    // write. Has no effect on iteration semantics; only changes what the
+    // pipeline considers conflicting between concurrent systems.
+    public Query<T1> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+
     // Per-term traversal (Self+Up). Up<T>() walks IsA chain (default).
     // Up<T>(rel) walks any relation. Parent<T>() = direct parent only via
     // ChildOf. Mirrors flecs term src=Up/Parent with optional trav relation.
@@ -762,6 +804,7 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
     }
 
     public Query<T1, T2> Inherited() { SetInherited(); return this; }
+    public Query<T1, T2> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -883,6 +926,7 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
     }
 
     public Query<T1, T2, T3> Inherited() { SetInherited(); return this; }
+    public Query<T1, T2, T3> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1005,6 +1049,7 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
     public Query<T1, T2, T3, T4> Inherited() { SetInherited(); return this; }
+    public Query<T1, T2, T3, T4> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1121,6 +1166,7 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
 
     public Query<T1, T2, T3, T4, T5> Inherited() { SetInherited(); return this; }
+    public Query<T1, T2, T3, T4, T5> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1240,6 +1286,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
     public Query<T1, T2, T3, T4, T5, T6> Without(Id id) { AddWithout(id); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6> Inherited() { SetInherited(); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }

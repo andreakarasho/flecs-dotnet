@@ -535,6 +535,8 @@ public sealed partial class World
 
     public void Set<T>(EntityId entity, T value) where T : struct
     {
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(SetCmd<T>.Rent(entity, value)); return; }
         lock (_lock)
         {
             if (ShouldQueueLocked())
@@ -685,6 +687,8 @@ public sealed partial class World
     // Add T as tag/component (no value set; component slot defaults).
     public void Add<T>(EntityId entity) where T : struct
     {
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(AddTypedCmd<T>.Rent(entity)); return; }
         lock (_lock)
         {
             var ent = GetOrRegisterAnyLocked<T>();
@@ -701,6 +705,8 @@ public sealed partial class World
             var rel = GetOrRegisterAnyLocked<TR>();
             var tgt = GetOrRegisterAnyLocked<TT>();
             var pair = Id.MakePair(rel, tgt);
+            var st = Stage.Current;
+            if (st != null) { st.Queue.Add(AddIdCmd.Rent(entity, pair)); return; }
             if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
             EnsureHasIdLocked(entity, pair);
         }
@@ -709,9 +715,11 @@ public sealed partial class World
     // Type-erased add — relation/target can be any entity.
     public void Add(EntityId entity, EntityId relation, EntityId target)
     {
+        var pair = Id.MakePair(relation, target);
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(AddIdCmd.Rent(entity, pair)); return; }
         lock (_lock)
         {
-            var pair = Id.MakePair(relation, target);
             if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, pair)); return; }
             EnsureHasIdLocked(entity, pair);
         }
@@ -719,6 +727,8 @@ public sealed partial class World
 
     public void Add(EntityId entity, Id componentId)
     {
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(AddIdCmd.Rent(entity, componentId)); return; }
         lock (_lock)
         {
             if (ShouldQueueLocked()) { _commands.Add(AddIdCmd.Rent(entity, componentId)); return; }
@@ -728,6 +738,8 @@ public sealed partial class World
 
     public void Remove<T>(EntityId entity) where T : struct
     {
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(RemoveTypedCmd<T>.Rent(entity)); return; }
         lock (_lock)
         {
             if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return;
@@ -743,6 +755,8 @@ public sealed partial class World
             if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return;
             if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return;
             var pair = Id.MakePair(rel, tgt);
+            var st = Stage.Current;
+            if (st != null) { st.Queue.Add(RemoveIdCmd.Rent(entity, pair)); return; }
             if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, pair)); return; }
             RemoveIdLocked(entity, pair);
         }
@@ -750,6 +764,8 @@ public sealed partial class World
 
     public void Remove(EntityId entity, Id componentId)
     {
+        var st = Stage.Current;
+        if (st != null) { st.Queue.Add(RemoveIdCmd.Rent(entity, componentId)); return; }
         lock (_lock)
         {
             if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, componentId)); return; }

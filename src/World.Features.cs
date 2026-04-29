@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Flecs;
 
@@ -43,58 +44,220 @@ public sealed partial class World
     public SystemHandle System(string name, EntityId phase, SystemAction action)
     {
         var h = new SystemHandle(name, phase, action);
-        lock (_lock) { _systems.Add(h); }
+        lock (_lock) { _systems.Add(h); _pipelineDirty = true; }
         return h;
     }
 
-    // Typed query-system sugar — Each callback wrapped in a system.
+    // Typed query-system sugar — Each callback wrapped in a system. Auto-
+    // populates the handle's r/w sets from the query (every term defaults to
+    // write; mark explicit reads via the .Read<T>() builder before calling
+    // System<...>). Sets ParallelSafe = true since the action is a pure
+    // Each invocation with no untracked side effects.
     public SystemHandle System<T1>(string name, EntityId phase, EachAction<T1> each)
         where T1 : struct
     {
         var q = Query<T1>();
-        return System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
     }
 
     public SystemHandle System<T1, T2>(string name, EntityId phase, EachAction<T1, T2> each)
         where T1 : struct where T2 : struct
     {
         var q = Query<T1, T2>();
-        return System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
     }
 
     public SystemHandle System<T1, T2, T3>(string name, EntityId phase, EachAction<T1, T2, T3> each)
         where T1 : struct where T2 : struct where T3 : struct
     {
         var q = Query<T1, T2, T3>();
-        return System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
+    }
+
+    // Pre-built query overload — caller controls .Read<T>() before passing in.
+    public SystemHandle System<T1>(string name, EntityId phase, Query<T1> q, EachAction<T1> each)
+        where T1 : struct
+    {
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
+    }
+    public SystemHandle System<T1, T2>(string name, EntityId phase, Query<T1, T2> q, EachAction<T1, T2> each)
+        where T1 : struct where T2 : struct
+    {
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
+    }
+    public SystemHandle System<T1, T2, T3>(string name, EntityId phase, Query<T1, T2, T3> q, EachAction<T1, T2, T3> each)
+        where T1 : struct where T2 : struct where T3 : struct
+    {
+        var h = System(name, phase, (w, dt) => q.Each(each));
+        return AttachQueryAccess(h, q);
+    }
+
+    private static SystemHandle AttachQueryAccess(SystemHandle h, QueryBase q)
+    {
+        h.SetReads(q.ReadIds);
+        h.SetWrites(q.WriteIds);
+        h.SetParallelSafe(true);
+        return h;
     }
 
     // Reusable buffer for Progress snapshot — avoids per-frame List alloc.
     private readonly List<SystemHandle> _systemsSnapshot = new();
+    // Worker pool for parallel wave execution. _workerCount == 0 → sequential
+    // (current default). UseWorkers spins up Stage objects + ThreadPool task
+    // dispatch. Mirrors flecs ecs_set_threads.
+    private int _workerCount;
+    private Stage[]? _stages;
+    // Cached per-phase wave grouping. Rebuilt on demand when _pipelineDirty
+    // is set (System() registration, Enable/Disable can leave this stale —
+    // callers that toggle Enabled mid-Progress must accept the prior wave
+    // structure for that frame).
+    private readonly Dictionary<EntityId, List<List<SystemHandle>>> _phaseWaves = new();
+    private bool _pipelineDirty = true;
 
-    // Run all enabled systems in builtin-phase order. Each phase processed
-    // sequentially; within a phase, systems run in registration order.
-    public void Progress(float deltaTime)
+    // Build waves per phase via greedy r/w-conflict packing. Systems with
+    // ParallelSafe == false serialize (one per wave). ParallelSafe systems
+    // pack into the earliest wave whose existing members do not conflict.
+    // Mirrors flecs pipeline_build_dependency_graph.
+    private void RebuildPipelineLocked()
     {
-        // Snapshot phase→systems mapping into reusable buffer. Lock released
-        // before invoke so callbacks can mutate world (deferred queue still
-        // applies).
-        lock (_lock)
-        {
-            _systemsSnapshot.Clear();
-            for (int i = 0; i < _systems.Count; i++) _systemsSnapshot.Add(_systems[i]);
-        }
-        var snapshot = _systemsSnapshot;
+        _phaseWaves.Clear();
         for (int p = 0; p < _phaseOrder.Length; p++)
         {
             var phase = _phaseOrder[p];
-            for (int i = 0; i < snapshot.Count; i++)
+            List<List<SystemHandle>>? waves = null;
+            for (int i = 0; i < _systems.Count; i++)
             {
-                var s = snapshot[i];
-                if (!s.Enabled || s.Phase != phase) continue;
-                s.Action(this, deltaTime);
+                var s = _systems[i];
+                if (s.Phase != phase) continue;
+                waves ??= new List<List<SystemHandle>>();
+                if (!s.ParallelSafe)
+                {
+                    waves.Add(new List<SystemHandle> { s });
+                    continue;
+                }
+                bool placed = false;
+                for (int w = 0; w < waves.Count; w++)
+                {
+                    var wave = waves[w];
+                    bool conflict = false;
+                    for (int j = 0; j < wave.Count; j++)
+                    {
+                        var other = wave[j];
+                        if (!other.ParallelSafe || s.ConflictsWith(other))
+                        { conflict = true; break; }
+                    }
+                    if (!conflict) { wave.Add(s); placed = true; break; }
+                }
+                if (!placed) waves.Add(new List<SystemHandle> { s });
+            }
+            if (waves != null) _phaseWaves[phase] = waves;
+        }
+        _pipelineDirty = false;
+    }
+
+    // Inspect computed waves for the given phase. Rebuilds if dirty. Returns
+    // empty when phase has no systems. Read-only snapshot — caller must not
+    // mutate the lists.
+    public IReadOnlyList<IReadOnlyList<SystemHandle>> GetPhaseWaves(EntityId phase)
+    {
+        lock (_lock)
+        {
+            if (_pipelineDirty) RebuildPipelineLocked();
+            return _phaseWaves.TryGetValue(phase, out var w)
+                ? (IReadOnlyList<IReadOnlyList<SystemHandle>>)w
+                : Array.Empty<IReadOnlyList<SystemHandle>>();
+        }
+    }
+
+    // Run all enabled systems in builtin-phase order. Within a phase, systems
+    // are grouped into waves by r/w conflict (pipeline DAG). Waves run in
+    // sequence; systems within a wave run sequentially today (parallelization
+    // gated on UseWorkers).
+    public void Progress(float deltaTime)
+    {
+        lock (_lock)
+        {
+            if (_pipelineDirty) RebuildPipelineLocked();
+        }
+        for (int p = 0; p < _phaseOrder.Length; p++)
+        {
+            var phase = _phaseOrder[p];
+            if (!_phaseWaves.TryGetValue(phase, out var waves)) continue;
+            for (int w = 0; w < waves.Count; w++)
+            {
+                var wave = waves[w];
+                RunWave(wave, deltaTime);
             }
         }
+    }
+
+    // Run one wave. Sequential today; UseWorkers swaps to parallel exec.
+    private void RunWave(List<SystemHandle> wave, float deltaTime)
+    {
+        if (_workerCount > 0 && wave.Count > 1)
+        {
+            RunWaveParallel(wave, deltaTime);
+            return;
+        }
+        for (int i = 0; i < wave.Count; i++)
+        {
+            var s = wave[i];
+            if (!s.Enabled) continue;
+            s.Action(this, deltaTime);
+        }
+    }
+
+    // Configure worker pool size. 0 → sequential (default). N > 0 → spawn N
+    // Stage instances; parallel waves dispatch via ThreadPool.QueueUserWorkItem
+    // and barrier on completion. Stages are reused across Progress calls.
+    public void UseWorkers(int count)
+    {
+        if (count < 0) ThrowHelper.NegativeCount(nameof(count));
+        lock (_lock)
+        {
+            _workerCount = count;
+            if (count == 0) { _stages = null; return; }
+            _stages = new Stage[count];
+            for (int i = 0; i < count; i++) _stages[i] = new Stage(this, i);
+        }
+    }
+
+    // Parallel wave dispatch. One task per system; each task runs its action
+    // with a thread-local Stage active so mutations queue per-stage rather
+    // than racing on the world. After all tasks barrier, stages flush in
+    // registration order to preserve semantics.
+    private void RunWaveParallel(List<SystemHandle> wave, float deltaTime)
+    {
+        var stages = _stages!;
+        // Enter readonly window for the whole wave so reads are coherent and
+        // any unstaged-mutation attempts go through the world defer queue.
+        using var _ = Readonly();
+        // Distribute systems across stages round-robin. More systems than
+        // stages → some stages run multiple sequentially.
+        int n = wave.Count;
+        var tasks = new Task[n];
+        for (int i = 0; i < n; i++)
+        {
+            var s = wave[i];
+            var stage = stages[i % stages.Length];
+            int idx = i;
+            tasks[idx] = Task.Run(() =>
+            {
+                if (!s.Enabled) return;
+                Stage.SetCurrent(stage);
+                try { s.Action(this, deltaTime); }
+                finally { Stage.ClearCurrent(); }
+            });
+        }
+        Task.WaitAll(tasks);
+        // Merge stages in registration order — preserves command sequencing
+        // when multiple systems on the same stage queued mutations.
+        for (int i = 0; i < stages.Length; i++) stages[i].Flush();
     }
 
     // ========== Modules ==========

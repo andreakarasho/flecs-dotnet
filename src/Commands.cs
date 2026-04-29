@@ -89,6 +89,28 @@ internal sealed class SetCmd<T> : Command where T : struct
     }
 }
 
+// AddTypedCmd<T> / RemoveTypedCmd<T> — used by Stage routing when the worker
+// thread can't safely resolve T → Id at queue time (registration would mutate
+// world state). Apply runs on the main thread post-barrier; registration is
+// safe there.
+internal sealed class AddTypedCmd<T> : Command where T : struct
+{
+    public EntityId Entity;
+    public static AddTypedCmd<T> Rent(EntityId e)
+    { var c = Rent<AddTypedCmd<T>>(); c.Entity = e; return c; }
+    internal override void Apply(World w) => w.Add<T>(Entity);
+    internal override void Recycle() => Return(this);
+}
+
+internal sealed class RemoveTypedCmd<T> : Command where T : struct
+{
+    public EntityId Entity;
+    public static RemoveTypedCmd<T> Rent(EntityId e)
+    { var c = Rent<RemoveTypedCmd<T>>(); c.Entity = e; return c; }
+    internal override void Apply(World w) => w.Remove<T>(Entity);
+    internal override void Recycle() => Return(this);
+}
+
 // ============================================================================
 // DeferScope — RAII helper. `using var _ = world.Defer();`
 // ============================================================================
