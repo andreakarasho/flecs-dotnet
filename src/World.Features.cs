@@ -634,7 +634,7 @@ public sealed partial class World
     }
 
     // BFS chain walk. Returns (found, table, row) on first hit.
-    private (bool found, Table? table, int row) FindInIsAChain(EntityId start, Id id)
+    internal (bool found, Table? table, int row) FindInIsAChain(EntityId start, Id id)
         => FindInChain(start, id, IsA.Id, blockable: true);
 
     // Generalized chain walk via arbitrary relation. blockable=true honors
