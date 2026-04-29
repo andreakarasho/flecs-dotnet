@@ -141,7 +141,7 @@ public class TraversalQueryTests
     }
 
     [Fact]
-    public void Run_SkipsTraversedTables()
+    public void Run_VisitsTraversedTables_WithSharedSpans()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -150,8 +150,39 @@ public class TraversalQueryTests
         w.SetIsA(inst, prefab);
 
         int rowsSeen = 0;
-        w.Query<Position>().Up<Position>().Run((in Iter<Position> it) => rowsSeen += it.Count);
-        // Run skips inherited-only tables; only prefab's own row counted.
-        Assert.Equal(1, rowsSeen);
+        bool sawShared = false;
+        w.Query<Position>().Up<Position>().Run((in Iter<Position> it) =>
+        {
+            rowsSeen += it.Count;
+            if (it.IsShared1) sawShared = true;
+        });
+        Assert.Equal(2, rowsSeen);
+        Assert.True(sawShared);
+    }
+
+    [Fact]
+    public void Run_AtN_ResolvesSharedAndOwnPerRow()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(5, 5));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        w.Set(inst, new Velocity(2, 3));   // own velocity, shared position
+
+        var posByEnt = new Dictionary<uint, float>();
+        var dxByEnt = new Dictionary<uint, float>();
+        w.Query<Position, Velocity>().Up<Position>().Run((in Iter<Position, Velocity> it) =>
+        {
+            for (int r = 0; r < it.Count; r++)
+            {
+                var e = it.Entity(r);
+                posByEnt[e.Id] = it.At1(r).X;
+                dxByEnt[e.Id] = it.At2(r).Dx;
+            }
+        });
+        // Only inst has both Position (shared) and Velocity (own).
+        Assert.Equal(5, posByEnt[inst.Id]);
+        Assert.Equal(2, dxByEnt[inst.Id]);
     }
 }

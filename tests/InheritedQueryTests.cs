@@ -95,7 +95,7 @@ public class InheritedQueryTests
     }
 
     [Fact]
-    public void Run_Inherited_SkipsInheritedOnlyTables()
+    public void Run_Inherited_VisitsBothOwnAndSharedTables()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -104,9 +104,15 @@ public class InheritedQueryTests
         w.SetIsA(inst, prefab);
 
         int rowsSeen = 0;
-        w.Query<Position>().Inherited().Run((in Iter<Position> it) => rowsSeen += it.Count);
-        // Run skips inherited-only tables; only prefab's own row counted.
-        Assert.Equal(1, rowsSeen);
+        bool sawShared = false;
+        w.Query<Position>().Inherited().Run((in Iter<Position> it) =>
+        {
+            rowsSeen += it.Count;
+            if (it.IsShared1) sawShared = true;
+        });
+        // Both prefab's own table (1 row) and inst's inherited-only table (1 row).
+        Assert.Equal(2, rowsSeen);
+        Assert.True(sawShared);
     }
 
     [Fact]

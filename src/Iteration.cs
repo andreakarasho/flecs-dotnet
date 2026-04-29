@@ -324,8 +324,9 @@ public ref struct TableEnumerator<T1> where T1 : struct
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && !t.Has(_query._c1)) continue;
-            _current = new Iter<T1>(_query._world, t, _query._c1);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            if (col1 == null) continue;
+            _current = new Iter<T1>(_query._world, t, col1, s1);
             return true;
         }
     }
@@ -376,8 +377,10 @@ public ref struct TableEnumerator<T1, T2>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2))) continue;
-            _current = new Iter<T1, T2>(_query._world, t, _query._c1, _query._c2);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+            if (col1 == null || col2 == null) continue;
+            _current = new Iter<T1, T2>(_query._world, t, col1, s1, col2, s2);
             return true;
         }
     }
@@ -429,8 +432,11 @@ public ref struct TableEnumerator<T1, T2, T3>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3))) continue;
-            _current = new Iter<T1, T2, T3>(_query._world, t, _query._c1, _query._c2, _query._c3);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+            if (col1 == null || col2 == null || col3 == null) continue;
+            _current = new Iter<T1, T2, T3>(_query._world, t, col1, s1, col2, s2, col3, s3);
             return true;
         }
     }
@@ -482,9 +488,13 @@ public ref struct TableEnumerator<T1, T2, T3, T4>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2)
-                                   || !t.Has(_query._c3) || !t.Has(_query._c4))) continue;
-            _current = new Iter<T1, T2, T3, T4>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
+            if (col1 == null || col2 == null || col3 == null || col4 == null) continue;
+            _current = new Iter<T1, T2, T3, T4>(_query._world, t,
+                col1, s1, col2, s2, col3, s3, col4, s4);
             return true;
         }
     }
@@ -536,9 +546,14 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
-                                   || !t.Has(_query._c4) || !t.Has(_query._c5))) continue;
-            _current = new Iter<T1, T2, T3, T4, T5>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4, _query._c5);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
+            var (col5, s5) = _query.ResolveSource<T5>(t, _query._c5);
+            if (col1 == null || col2 == null || col3 == null || col4 == null || col5 == null) continue;
+            _current = new Iter<T1, T2, T3, T4, T5>(_query._world, t,
+                col1, s1, col2, s2, col3, s3, col4, s4, col5, s5);
             return true;
         }
     }
@@ -590,9 +605,16 @@ public ref struct TableEnumerator<T1, T2, T3, T4, T5, T6>
             if (_tableIdx >= matched.Count) return false;
             var t = matched[_tableIdx];
             if (t.Count == 0) continue;
-            if (_query._anyInheritance && (!t.Has(_query._c1) || !t.Has(_query._c2) || !t.Has(_query._c3)
-                                   || !t.Has(_query._c4) || !t.Has(_query._c5) || !t.Has(_query._c6))) continue;
-            _current = new Iter<T1, T2, T3, T4, T5, T6>(_query._world, t, _query._c1, _query._c2, _query._c3, _query._c4, _query._c5, _query._c6);
+            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
+            var (col5, s5) = _query.ResolveSource<T5>(t, _query._c5);
+            var (col6, s6) = _query.ResolveSource<T6>(t, _query._c6);
+            if (col1 == null || col2 == null || col3 == null
+                || col4 == null || col5 == null || col6 == null) continue;
+            _current = new Iter<T1, T2, T3, T4, T5, T6>(_query._world, t,
+                col1, s1, col2, s2, col3, s3, col4, s4, col5, s5, col6, s6);
             return true;
         }
     }

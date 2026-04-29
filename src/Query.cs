@@ -24,15 +24,29 @@ public ref struct Iter<T1> where T1 : struct
     internal readonly World _world;
     internal readonly Table _table;
     internal readonly Column<T1> _col1;
-    internal Iter(World w, Table t, Id c1)
+    // -1 = own (column belongs to _table); >=0 = shared row in ancestor table.
+    internal readonly int _shared1;
+
+    internal Iter(World w, Table t, Column<T1> col1, int shared1)
     {
-        _world = w;
-        _table = t;
-        _col1 = (Column<T1>)t.Columns[t.IndexOf(c1)]!;
+        _world = w; _table = t; _col1 = col1; _shared1 = shared1;
     }
+
     public int Count => _table.Count;
     public EntityId Entity(int row) => _table.Entities[row];
-    public Span<T1> Field1() => _col1.AsSpan();
+
+    public bool IsShared1 => _shared1 >= 0;
+
+    // Per-row ref. Resolves shared vs own. Use in mixed-source loops.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
+
+    // Span over column data. Length=Count for own; Length=1 for shared
+    // (single value applies to every matched row). Check IsShared1 for
+    // mixed-source iteration.
+    public Span<T1> Field1()
+        => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+
     // Optional column for this table. Empty Span when absent. Per-table O(1)
     // lookup; cheaper than per-row TryGetRef.
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
@@ -44,18 +58,15 @@ public ref struct Iter<T1, T2> where T1 : struct where T2 : struct
     internal readonly World _world;
     internal readonly Table _table;
     internal readonly int _count;
-    // Precomputed Spans — avoids per-call AsSpan chain through Column field.
-    // JIT loves field loads over property/method indirection.
-    internal readonly Span<T1> _f1;
-    internal readonly Span<T2> _f2;
+    internal readonly Column<T1> _col1;
+    internal readonly Column<T2> _col2;
+    internal readonly int _shared1, _shared2;
 
-    internal Iter(World w, Table t, Id c1, Id c2)
+    internal Iter(World w, Table t, Column<T1> col1, int shared1, Column<T2> col2, int shared2)
     {
-        _world = w;
-        _table = t;
-        _count = t.Count;
-        _f1 = ((Column<T1>)t.Columns[t.IndexOf(c1)]!).AsSpan();
-        _f2 = ((Column<T2>)t.Columns[t.IndexOf(c2)]!).AsSpan();
+        _world = w; _table = t; _count = t.Count;
+        _col1 = col1; _shared1 = shared1;
+        _col2 = col2; _shared2 = shared2;
     }
 
     public int Count
@@ -65,10 +76,20 @@ public ref struct Iter<T1, T2> where T1 : struct where T2 : struct
     }
     public EntityId Entity(int row) => _table.Entities[row];
 
+    public bool IsShared1 => _shared1 >= 0;
+    public bool IsShared2 => _shared2 >= 0;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Span<T1> Field1() => _f1;
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Span<T2> Field2() => _f2;
+    public ref T2 At2(int row) => ref _col2.GetRef(_shared2 < 0 ? row : _shared2);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Span<T1> Field1()
+        => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Span<T2> Field2()
+        => _shared2 < 0 ? _col2.AsSpan() : _col2.AsSpan().Slice(_shared2, 1);
 
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
     public bool HasOptional<T>() where T : struct => IterOpt.Has<T>(_world, _table);
@@ -81,19 +102,34 @@ public ref struct Iter<T1, T2, T3> where T1 : struct where T2 : struct where T3 
     internal readonly Column<T1> _col1;
     internal readonly Column<T2> _col2;
     internal readonly Column<T3> _col3;
-    internal Iter(World w, Table t, Id c1, Id c2, Id c3)
+    internal readonly int _shared1, _shared2, _shared3;
+
+    internal Iter(World w, Table t,
+        Column<T1> col1, int shared1, Column<T2> col2, int shared2, Column<T3> col3, int shared3)
     {
-        _world = w;
-        _table = t;
-        _col1 = (Column<T1>)t.Columns[t.IndexOf(c1)]!;
-        _col2 = (Column<T2>)t.Columns[t.IndexOf(c2)]!;
-        _col3 = (Column<T3>)t.Columns[t.IndexOf(c3)]!;
+        _world = w; _table = t;
+        _col1 = col1; _shared1 = shared1;
+        _col2 = col2; _shared2 = shared2;
+        _col3 = col3; _shared3 = shared3;
     }
     public int Count => _table.Count;
     public EntityId Entity(int row) => _table.Entities[row];
-    public Span<T1> Field1() => _col1.AsSpan();
-    public Span<T2> Field2() => _col2.AsSpan();
-    public Span<T3> Field3() => _col3.AsSpan();
+
+    public bool IsShared1 => _shared1 >= 0;
+    public bool IsShared2 => _shared2 >= 0;
+    public bool IsShared3 => _shared3 >= 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T2 At2(int row) => ref _col2.GetRef(_shared2 < 0 ? row : _shared2);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T3 At3(int row) => ref _col3.GetRef(_shared3 < 0 ? row : _shared3);
+
+    public Span<T1> Field1() => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+    public Span<T2> Field2() => _shared2 < 0 ? _col2.AsSpan() : _col2.AsSpan().Slice(_shared2, 1);
+    public Span<T3> Field3() => _shared3 < 0 ? _col3.AsSpan() : _col3.AsSpan().Slice(_shared3, 1);
+
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
     public bool HasOptional<T>() where T : struct => IterOpt.Has<T>(_world, _table);
 }
@@ -123,21 +159,40 @@ public ref struct Iter<T1, T2, T3, T4>
     internal readonly Column<T2> _col2;
     internal readonly Column<T3> _col3;
     internal readonly Column<T4> _col4;
-    internal Iter(World w, Table t, Id c1, Id c2, Id c3, Id c4)
+    internal readonly int _shared1, _shared2, _shared3, _shared4;
+
+    internal Iter(World w, Table t,
+        Column<T1> col1, int shared1, Column<T2> col2, int shared2,
+        Column<T3> col3, int shared3, Column<T4> col4, int shared4)
     {
-        _world = w;
-        _table = t;
-        _col1 = (Column<T1>)t.Columns[t.IndexOf(c1)]!;
-        _col2 = (Column<T2>)t.Columns[t.IndexOf(c2)]!;
-        _col3 = (Column<T3>)t.Columns[t.IndexOf(c3)]!;
-        _col4 = (Column<T4>)t.Columns[t.IndexOf(c4)]!;
+        _world = w; _table = t;
+        _col1 = col1; _shared1 = shared1;
+        _col2 = col2; _shared2 = shared2;
+        _col3 = col3; _shared3 = shared3;
+        _col4 = col4; _shared4 = shared4;
     }
     public int Count => _table.Count;
     public EntityId Entity(int row) => _table.Entities[row];
-    public Span<T1> Field1() => _col1.AsSpan();
-    public Span<T2> Field2() => _col2.AsSpan();
-    public Span<T3> Field3() => _col3.AsSpan();
-    public Span<T4> Field4() => _col4.AsSpan();
+
+    public bool IsShared1 => _shared1 >= 0;
+    public bool IsShared2 => _shared2 >= 0;
+    public bool IsShared3 => _shared3 >= 0;
+    public bool IsShared4 => _shared4 >= 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T2 At2(int row) => ref _col2.GetRef(_shared2 < 0 ? row : _shared2);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T3 At3(int row) => ref _col3.GetRef(_shared3 < 0 ? row : _shared3);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T4 At4(int row) => ref _col4.GetRef(_shared4 < 0 ? row : _shared4);
+
+    public Span<T1> Field1() => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+    public Span<T2> Field2() => _shared2 < 0 ? _col2.AsSpan() : _col2.AsSpan().Slice(_shared2, 1);
+    public Span<T3> Field3() => _shared3 < 0 ? _col3.AsSpan() : _col3.AsSpan().Slice(_shared3, 1);
+    public Span<T4> Field4() => _shared4 < 0 ? _col4.AsSpan() : _col4.AsSpan().Slice(_shared4, 1);
+
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
     public bool HasOptional<T>() where T : struct => IterOpt.Has<T>(_world, _table);
 }
@@ -152,23 +207,46 @@ public ref struct Iter<T1, T2, T3, T4, T5>
     internal readonly Column<T3> _col3;
     internal readonly Column<T4> _col4;
     internal readonly Column<T5> _col5;
-    internal Iter(World w, Table t, Id c1, Id c2, Id c3, Id c4, Id c5)
+    internal readonly int _shared1, _shared2, _shared3, _shared4, _shared5;
+
+    internal Iter(World w, Table t,
+        Column<T1> col1, int shared1, Column<T2> col2, int shared2,
+        Column<T3> col3, int shared3, Column<T4> col4, int shared4,
+        Column<T5> col5, int shared5)
     {
-        _world = w;
-        _table = t;
-        _col1 = (Column<T1>)t.Columns[t.IndexOf(c1)]!;
-        _col2 = (Column<T2>)t.Columns[t.IndexOf(c2)]!;
-        _col3 = (Column<T3>)t.Columns[t.IndexOf(c3)]!;
-        _col4 = (Column<T4>)t.Columns[t.IndexOf(c4)]!;
-        _col5 = (Column<T5>)t.Columns[t.IndexOf(c5)]!;
+        _world = w; _table = t;
+        _col1 = col1; _shared1 = shared1;
+        _col2 = col2; _shared2 = shared2;
+        _col3 = col3; _shared3 = shared3;
+        _col4 = col4; _shared4 = shared4;
+        _col5 = col5; _shared5 = shared5;
     }
     public int Count => _table.Count;
     public EntityId Entity(int row) => _table.Entities[row];
-    public Span<T1> Field1() => _col1.AsSpan();
-    public Span<T2> Field2() => _col2.AsSpan();
-    public Span<T3> Field3() => _col3.AsSpan();
-    public Span<T4> Field4() => _col4.AsSpan();
-    public Span<T5> Field5() => _col5.AsSpan();
+
+    public bool IsShared1 => _shared1 >= 0;
+    public bool IsShared2 => _shared2 >= 0;
+    public bool IsShared3 => _shared3 >= 0;
+    public bool IsShared4 => _shared4 >= 0;
+    public bool IsShared5 => _shared5 >= 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T2 At2(int row) => ref _col2.GetRef(_shared2 < 0 ? row : _shared2);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T3 At3(int row) => ref _col3.GetRef(_shared3 < 0 ? row : _shared3);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T4 At4(int row) => ref _col4.GetRef(_shared4 < 0 ? row : _shared4);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T5 At5(int row) => ref _col5.GetRef(_shared5 < 0 ? row : _shared5);
+
+    public Span<T1> Field1() => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+    public Span<T2> Field2() => _shared2 < 0 ? _col2.AsSpan() : _col2.AsSpan().Slice(_shared2, 1);
+    public Span<T3> Field3() => _shared3 < 0 ? _col3.AsSpan() : _col3.AsSpan().Slice(_shared3, 1);
+    public Span<T4> Field4() => _shared4 < 0 ? _col4.AsSpan() : _col4.AsSpan().Slice(_shared4, 1);
+    public Span<T5> Field5() => _shared5 < 0 ? _col5.AsSpan() : _col5.AsSpan().Slice(_shared5, 1);
+
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
     public bool HasOptional<T>() where T : struct => IterOpt.Has<T>(_world, _table);
 }
@@ -184,25 +262,51 @@ public ref struct Iter<T1, T2, T3, T4, T5, T6>
     internal readonly Column<T4> _col4;
     internal readonly Column<T5> _col5;
     internal readonly Column<T6> _col6;
-    internal Iter(World w, Table t, Id c1, Id c2, Id c3, Id c4, Id c5, Id c6)
+    internal readonly int _shared1, _shared2, _shared3, _shared4, _shared5, _shared6;
+
+    internal Iter(World w, Table t,
+        Column<T1> col1, int shared1, Column<T2> col2, int shared2,
+        Column<T3> col3, int shared3, Column<T4> col4, int shared4,
+        Column<T5> col5, int shared5, Column<T6> col6, int shared6)
     {
-        _world = w;
-        _table = t;
-        _col1 = (Column<T1>)t.Columns[t.IndexOf(c1)]!;
-        _col2 = (Column<T2>)t.Columns[t.IndexOf(c2)]!;
-        _col3 = (Column<T3>)t.Columns[t.IndexOf(c3)]!;
-        _col4 = (Column<T4>)t.Columns[t.IndexOf(c4)]!;
-        _col5 = (Column<T5>)t.Columns[t.IndexOf(c5)]!;
-        _col6 = (Column<T6>)t.Columns[t.IndexOf(c6)]!;
+        _world = w; _table = t;
+        _col1 = col1; _shared1 = shared1;
+        _col2 = col2; _shared2 = shared2;
+        _col3 = col3; _shared3 = shared3;
+        _col4 = col4; _shared4 = shared4;
+        _col5 = col5; _shared5 = shared5;
+        _col6 = col6; _shared6 = shared6;
     }
     public int Count => _table.Count;
     public EntityId Entity(int row) => _table.Entities[row];
-    public Span<T1> Field1() => _col1.AsSpan();
-    public Span<T2> Field2() => _col2.AsSpan();
-    public Span<T3> Field3() => _col3.AsSpan();
-    public Span<T4> Field4() => _col4.AsSpan();
-    public Span<T5> Field5() => _col5.AsSpan();
-    public Span<T6> Field6() => _col6.AsSpan();
+
+    public bool IsShared1 => _shared1 >= 0;
+    public bool IsShared2 => _shared2 >= 0;
+    public bool IsShared3 => _shared3 >= 0;
+    public bool IsShared4 => _shared4 >= 0;
+    public bool IsShared5 => _shared5 >= 0;
+    public bool IsShared6 => _shared6 >= 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T1 At1(int row) => ref _col1.GetRef(_shared1 < 0 ? row : _shared1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T2 At2(int row) => ref _col2.GetRef(_shared2 < 0 ? row : _shared2);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T3 At3(int row) => ref _col3.GetRef(_shared3 < 0 ? row : _shared3);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T4 At4(int row) => ref _col4.GetRef(_shared4 < 0 ? row : _shared4);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T5 At5(int row) => ref _col5.GetRef(_shared5 < 0 ? row : _shared5);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T6 At6(int row) => ref _col6.GetRef(_shared6 < 0 ? row : _shared6);
+
+    public Span<T1> Field1() => _shared1 < 0 ? _col1.AsSpan() : _col1.AsSpan().Slice(_shared1, 1);
+    public Span<T2> Field2() => _shared2 < 0 ? _col2.AsSpan() : _col2.AsSpan().Slice(_shared2, 1);
+    public Span<T3> Field3() => _shared3 < 0 ? _col3.AsSpan() : _col3.AsSpan().Slice(_shared3, 1);
+    public Span<T4> Field4() => _shared4 < 0 ? _col4.AsSpan() : _col4.AsSpan().Slice(_shared4, 1);
+    public Span<T5> Field5() => _shared5 < 0 ? _col5.AsSpan() : _col5.AsSpan().Slice(_shared5, 1);
+    public Span<T6> Field6() => _shared6 < 0 ? _col6.AsSpan() : _col6.AsSpan().Slice(_shared6, 1);
+
     public Span<T> OptionalField<T>() where T : struct => IterOpt.Field<T>(_world, _table);
     public bool HasOptional<T>() where T : struct => IterOpt.Has<T>(_world, _table);
 }
@@ -534,8 +638,9 @@ public sealed class Query<T1> : QueryBase where T1 : struct
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && !t.Has(_c1)) continue;
-            var it = new Iter<T1>(_world, t, _c1);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            if (col1 == null) continue;
+            var it = new Iter<T1>(_world, t, col1, s1);
             action(in it);
         }
         MarkObserved();
@@ -636,8 +741,10 @@ public sealed class Query<T1, T2> : QueryBase where T1 : struct where T2 : struc
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2))) continue;
-            var it = new Iter<T1, T2>(_world, t, _c1, _c2);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            var (col2, s2) = ResolveSource<T2>(t, _c2);
+            if (col1 == null || col2 == null) continue;
+            var it = new Iter<T1, T2>(_world, t, col1, s1, col2, s2);
             action(in it);
         }
         MarkObserved();
@@ -740,8 +847,11 @@ public sealed class Query<T1, T2, T3> : QueryBase where T1 : struct where T2 : s
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3))) continue;
-            var it = new Iter<T1, T2, T3>(_world, t, _c1, _c2, _c3);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            var (col2, s2) = ResolveSource<T2>(t, _c2);
+            var (col3, s3) = ResolveSource<T3>(t, _c3);
+            if (col1 == null || col2 == null || col3 == null) continue;
+            var it = new Iter<T1, T2, T3>(_world, t, col1, s1, col2, s2, col3, s3);
             action(in it);
         }
         MarkObserved();
@@ -836,8 +946,12 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4))) continue;
-            var it = new Iter<T1, T2, T3, T4>(_world, t, _c1, _c2, _c3, _c4);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            var (col2, s2) = ResolveSource<T2>(t, _c2);
+            var (col3, s3) = ResolveSource<T3>(t, _c3);
+            var (col4, s4) = ResolveSource<T4>(t, _c4);
+            if (col1 == null || col2 == null || col3 == null || col4 == null) continue;
+            var it = new Iter<T1, T2, T3, T4>(_world, t, col1, s1, col2, s2, col3, s3, col4, s4);
             action(in it);
         }
         MarkObserved();
@@ -927,8 +1041,13 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3) || !t.Has(_c4) || !t.Has(_c5))) continue;
-            var it = new Iter<T1, T2, T3, T4, T5>(_world, t, _c1, _c2, _c3, _c4, _c5);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            var (col2, s2) = ResolveSource<T2>(t, _c2);
+            var (col3, s3) = ResolveSource<T3>(t, _c3);
+            var (col4, s4) = ResolveSource<T4>(t, _c4);
+            var (col5, s5) = ResolveSource<T5>(t, _c5);
+            if (col1 == null || col2 == null || col3 == null || col4 == null || col5 == null) continue;
+            var it = new Iter<T1, T2, T3, T4, T5>(_world, t, col1, s1, col2, s2, col3, s3, col4, s4, col5, s5);
             action(in it);
         }
         MarkObserved();
@@ -1019,9 +1138,16 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
         {
             var t = _matched[ti];
             if (t.Count == 0) continue;
-            if (_anyInheritance && (!t.Has(_c1) || !t.Has(_c2) || !t.Has(_c3)
-                            || !t.Has(_c4) || !t.Has(_c5) || !t.Has(_c6))) continue;
-            var it = new Iter<T1, T2, T3, T4, T5, T6>(_world, t, _c1, _c2, _c3, _c4, _c5, _c6);
+            var (col1, s1) = ResolveSource<T1>(t, _c1);
+            var (col2, s2) = ResolveSource<T2>(t, _c2);
+            var (col3, s3) = ResolveSource<T3>(t, _c3);
+            var (col4, s4) = ResolveSource<T4>(t, _c4);
+            var (col5, s5) = ResolveSource<T5>(t, _c5);
+            var (col6, s6) = ResolveSource<T6>(t, _c6);
+            if (col1 == null || col2 == null || col3 == null
+                || col4 == null || col5 == null || col6 == null) continue;
+            var it = new Iter<T1, T2, T3, T4, T5, T6>(_world, t,
+                col1, s1, col2, s2, col3, s3, col4, s4, col5, s5, col6, s6);
             action(in it);
         }
         MarkObserved();
