@@ -161,6 +161,7 @@ public sealed partial class World
                     col.InvokeOnAdd(this, e, rec.Row);
                 }
                 GetIdHooks(compId)?.OnAdd?.Invoke(this, e);
+                DispatchMultiObsLocked(Event.OnAdd, e, (Id)compId);
                 result[i] = e;
             }
         }
@@ -215,7 +216,9 @@ public sealed partial class World
                 col.CopyTo(this, dst, sRow, col, dRow);
                 // Fire OnSet so observers see the cloned value.
                 col.InvokeOnSet(this, dst, dRow);
-                GetIdHooks(srcTable.ComponentIds[i])?.OnSet?.Invoke(this, dst);
+                var compIdAtI = srcTable.ComponentIds[i];
+                GetIdHooks(compIdAtI)?.OnSet?.Invoke(this, dst);
+                DispatchMultiObsLocked(Event.OnSet, dst, compIdAtI);
             }
             return dst;
         }

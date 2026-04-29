@@ -106,6 +106,13 @@ public sealed partial class World
     // User-driven: Emit() fires; no automatic dispatch.
     private readonly Dictionary<(uint evtId, Id target), Action<World, EntityId>?> _customObs = new();
 
+    // Multi-term builtin-event observers. Trigger-keyed: lookup is by
+    // (event, triggered-id). Each observer checks its remaining terms before
+    // dispatch. An observer with N terms is registered N times — once per
+    // term — so any of its term ids firing the event reaches the same
+    // observer instance.
+    private readonly Dictionary<(Event evt, Id id), List<MultiObserver>> _multiObsByTrigger = new();
+
     // Per-(TEvent, T...) resolved (evtId, targetId) cache. Avoids dict lookups
     // + register calls on every Emit. Entries stable once written: registration
     // creates entities exactly once, ids never change.
@@ -303,7 +310,9 @@ public sealed partial class World
                 col.InvokeOnRemove(this, entity, rec.Row);
                 col.InvokeDtor(this, entity, rec.Row);
             }
-            GetIdHooks(table.ComponentIds[i])?.OnRemove?.Invoke(this, entity);
+            var compIdAtI = table.ComponentIds[i];
+            GetIdHooks(compIdAtI)?.OnRemove?.Invoke(this, entity);
+            DispatchMultiObsLocked(Event.OnRemove, entity, compIdAtI);
         }
         var moved = table.RemoveRow(rec.Row);
         if (moved.Id != 0)
@@ -556,6 +565,7 @@ public sealed partial class World
             col.InvokeOnAdd(this, entity, rec.Row);
         }
         GetIdHooks(compId)?.OnAdd?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnAdd, entity, compId);
 
         // Symmetric: mirror (R, target) on entity with (R, entity) on target.
         // Recursion terminates because second call hits early-out via
@@ -589,6 +599,7 @@ public sealed partial class World
             srcCol.InvokeDtor(this, entity, rec.Row);
         }
         GetIdHooks(compId)?.OnRemove?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnRemove, entity, compId);
         if (!src._removeEdges.TryGetValue(compId, out var dst))
         {
             var newIds = ArrayWithout(src.ComponentIds, compId);

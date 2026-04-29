@@ -220,6 +220,76 @@ public sealed partial class World
     private IdHooks? GetIdHooks(Id id)
         => _idHooks.TryGetValue(id, out var ih) ? ih : null;
 
+    // ===== Multi-term observers (filter-style) =====
+
+    // Register an observer that fires when 'evt' hits T1 or T2 on an entity
+    // AND that entity has the other term. Refs handed to the callback may be
+    // shared (inherited via IsA) — same semantics as Get<T>. Mirrors flecs
+    // filter-style observer with two terms.
+    public void Observer<T1, T2>(Event evt, MultiObserverAction<T1, T2> action)
+        where T1 : struct where T2 : struct
+    {
+        Id id1, id2;
+        lock (_lock)
+        {
+            // Refs handed to the callback presume data components.
+            id1 = (Id)GetOrRegisterComponentLocked<T1>();
+            id2 = (Id)GetOrRegisterComponentLocked<T2>();
+            // Capture-by-value of typed ids; dispatch closes over typed action
+            // so the per-event hot path stays untyped.
+            void Dispatch(World w, EntityId e)
+            {
+                ref var c1 = ref w.TryGetRef<T1>(e);
+                ref var c2 = ref w.TryGetRef<T2>(e);
+                if (Unsafe.IsNullRef(ref c1) || Unsafe.IsNullRef(ref c2)) return;
+                action(w, e, ref c1, ref c2);
+            }
+            var obs = new MultiObserver(new[] { id1, id2 }, Dispatch);
+            AddMultiObsTriggerLocked(evt, id1, obs);
+            AddMultiObsTriggerLocked(evt, id2, obs);
+        }
+    }
+
+    private void AddMultiObsTriggerLocked(Event evt, Id triggerId, MultiObserver obs)
+    {
+        var key = (evt, triggerId);
+        if (!_multiObsByTrigger.TryGetValue(key, out var list))
+        {
+            list = new List<MultiObserver>();
+            _multiObsByTrigger[key] = list;
+        }
+        list.Add(obs);
+    }
+
+    // Called from event-firing sites after single-id hooks. Walks the trigger
+    // observer list, checks remaining terms via Has (Self+Up), dispatches.
+    private void DispatchMultiObsLocked(Event evt, EntityId entity, Id triggerId)
+    {
+        if (!_multiObsByTrigger.TryGetValue((evt, triggerId), out var list)) return;
+        for (int i = 0; i < list.Count; i++)
+        {
+            var obs = list[i];
+            bool allHave = true;
+            for (int j = 0; j < obs.Ids.Length; j++)
+            {
+                var id = obs.Ids[j];
+                if (id == triggerId) continue;
+                if (!HasIdSelfOrIsA(entity, id)) { allHave = false; break; }
+            }
+            if (allHave) obs.Dispatch(this, entity);
+        }
+    }
+
+    // Self+Up id check used by multi-observer dispatch. Mirrors Has(EntityId, Id)
+    // logic without re-validating IsAlive (caller already in event flow).
+    private bool HasIdSelfOrIsA(EntityId entity, Id id)
+    {
+        ref var rec = ref GetSlot(entity.Id);
+        if (_tablesById[rec.TableId]!.Has(id)) return true;
+        var (found, _, _) = FindInIsAChain(entity, id);
+        return found;
+    }
+
     // ========== Custom events ==========
     //
     // Events are user-defined types. First use auto-registers the type as a
@@ -437,6 +507,7 @@ public sealed partial class World
             col.Set(rec.Row, value);
             col.InvokeOnSet(this, entity, rec.Row);
             GetIdHooks((Id)compId)?.OnSet?.Invoke(this, entity);
+            DispatchMultiObsLocked(Event.OnSet, entity, (Id)compId);
         }
     }
 

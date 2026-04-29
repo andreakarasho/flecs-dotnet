@@ -48,3 +48,17 @@ internal sealed class IdHooks
     public Action<World, EntityId>? OnRemove;
     public Action<World, EntityId>? OnSet;
 }
+
+// Multi-term observer. Fires when an event hits any of its term ids AND the
+// entity satisfies all other terms (via Has — Self+Up). Mirrors flecs
+// filter-style observers for the common "react when shape forms" pattern.
+public delegate void MultiObserverAction<T1, T2>(World world, EntityId entity, ref T1 c1, ref T2 c2)
+    where T1 : struct where T2 : struct;
+
+internal sealed class MultiObserver
+{
+    public readonly Id[] Ids;
+    public readonly Action<World, EntityId> Dispatch;
+    public MultiObserver(Id[] ids, Action<World, EntityId> dispatch)
+    { Ids = ids; Dispatch = dispatch; }
+}
