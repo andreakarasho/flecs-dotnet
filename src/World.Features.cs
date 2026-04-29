@@ -689,15 +689,20 @@ public sealed partial class World
             ref var rec = ref GetSlot(entity.Id);
             var t = _tablesById[rec.TableId]!;
             // Collect targets first — RemoveIdLocked mutates table.
-            List<Id>? toRemove = null;
-            for (int i = 0; i < t.ComponentIds.Length; i++)
+            // default: lazy — no rent until first match.
+            var toRemove = default(PooledList<Id>);
+            try
             {
-                var id = t.ComponentIds[i];
-                if (id.IsPair && id.Relation == ChildOf.Id)
-                    (toRemove ??= new List<Id>()).Add(id);
+                for (int i = 0; i < t.ComponentIds.Length; i++)
+                {
+                    var id = t.ComponentIds[i];
+                    if (id.IsPair && id.Relation == ChildOf.Id)
+                        toRemove.Add(id);
+                }
+                var span = toRemove.AsSpan;
+                for (int i = 0; i < span.Length; i++) RemoveIdLocked(entity, span[i]);
             }
-            if (toRemove == null) return;
-            foreach (var id in toRemove) RemoveIdLocked(entity, id);
+            finally { toRemove.Dispose(); }
         }
     }
 

@@ -106,6 +106,19 @@ public sealed partial class World
     // User-driven: Emit() fires; no automatic dispatch.
     private readonly Dictionary<(uint evtId, Id target), Action<World, EntityId>?> _customObs = new();
 
+    // Per-(TEvent, T...) resolved (evtId, targetId) cache. Avoids dict lookups
+    // + register calls on every Emit. Entries stable once written: registration
+    // creates entities exactly once, ids never change.
+    private readonly Dictionary<(Type, Type), (uint evtId, Id tgt)> _emitKeyCache1 = new();
+    private readonly Dictionary<(Type, Type, Type), (uint evtId, Id tgt)> _emitKeyCache2 = new();
+
+    // Pooled BFS buffers for EmitInternal propagation. Reused across calls;
+    // reentrancy guard falls back to fresh allocs if a callback re-emits.
+    private List<EntityId>? _emitChainBuf;
+    private HashSet<uint>? _emitVisitedBuf;
+    private Queue<EntityId>? _emitQueueBuf;
+    private bool _emitBufBusy;
+
     // Delete-policy tables. Keyed by Id (component/tag/relation entity).
     //   _onDelete[X]       — fate of holders when X itself is deleted
     //                        (X used as component, tag, or as relation in pairs)
@@ -358,22 +371,25 @@ public sealed partial class World
         {
             var (t, id, policy) = actions[ai];
             // Snapshot — RemoveIdLocked / cascade-delete will mutate table.
-            var holders = t.Entities.ToArray();
+            using var holders = new PooledList<EntityId>(t.Entities.Count);
+            var ents = t.Entities;
+            for (int i = 0; i < ents.Count; i++) holders.Add(ents[i]);
+            var hSpan = holders.AsSpan;
             switch (policy)
             {
                 case DeletePolicy.Remove:
-                    foreach (var e in holders)
-                        if (IsAliveCore(e)) RemoveIdLocked(e, id);
+                    for (int i = 0; i < hSpan.Length; i++)
+                        if (IsAliveCore(hSpan[i])) RemoveIdLocked(hSpan[i], id);
                     break;
                 case DeletePolicy.Delete:
                     cascade ??= new Queue<EntityId>();
-                    foreach (var e in holders)
-                        if (IsAliveCore(e)) cascade.Enqueue(e);
+                    for (int i = 0; i < hSpan.Length; i++)
+                        if (IsAliveCore(hSpan[i])) cascade.Enqueue(hSpan[i]);
                     break;
                 case DeletePolicy.Panic:
                     throw new InvalidOperationException(
                         $"DeletePolicy.Panic: deleting #{deletedId} would orphan id {id} on " +
-                        $"#{(holders.Length > 0 ? holders[0].Id : 0u)} (and possibly others).");
+                        $"#{(hSpan.Length > 0 ? hSpan[0].Id : 0u)} (and possibly others).");
             }
         }
     }

@@ -154,19 +154,19 @@ public sealed partial class World
     // applies if active). Mirrors flecs yield_existing pass.
     private void YieldExistingIdLocked(Id id, Action<World, EntityId> action)
     {
-        EntityId[] holders;
+        using var holders = new PooledList<EntityId>(16);
         lock (_lock)
         {
-            var list = new List<EntityId>();
             for (int ti = 1; ti < _tablesById.Count; ti++)
             {
                 var t = _tablesById[ti];
                 if (t == null || t.Count == 0 || !t.Has(id)) continue;
-                list.AddRange(t.Entities);
+                var ents = t.Entities;
+                for (int i = 0; i < ents.Count; i++) holders.Add(ents[i]);
             }
-            holders = list.ToArray();
         }
-        foreach (var e in holders) action(this, e);
+        var span = holders.AsSpan;
+        for (int i = 0; i < span.Length; i++) action(this, span[i]);
     }
 
     // Typed yield — invokes action with ref to current value of T on every
@@ -180,7 +180,7 @@ public sealed partial class World
             compId = (Id)ent;
         }
         // Collect (table, row, entity) snapshots and dispatch outside lock.
-        var snap = new List<(Table t, int row, EntityId e)>();
+        using var snap = new PooledList<(Table t, int row, EntityId e)>(16);
         lock (_lock)
         {
             for (int ti = 1; ti < _tablesById.Count; ti++)
@@ -190,8 +190,10 @@ public sealed partial class World
                 for (int r = 0; r < t.Entities.Count; r++) snap.Add((t, r, t.Entities[r]));
             }
         }
-        foreach (var (t, row, e) in snap)
+        var span = snap.AsSpan;
+        for (int i = 0; i < span.Length; i++)
         {
+            var e = span[i].e;
             // Re-resolve ref each iteration — table may have shifted rows due
             // to side effects of prior callbacks.
             if (!IsAlive(e)) continue;
@@ -276,35 +278,55 @@ public sealed partial class World
     public void Emit<TEvent, T>(EntityId entity, EntityId propagateRel = default)
         where TEvent : struct where T : struct
     {
-        EntityId evt;
+        var key = (typeof(TEvent), typeof(T));
+        uint evtId;
         Id id;
         lock (_lock)
         {
-            evt = GetOrRegisterAnyLocked<TEvent>();
-            id = (Id)GetOrRegisterAnyLocked<T>();
+            if (_emitKeyCache1.TryGetValue(key, out var cached))
+            {
+                evtId = cached.evtId;
+                id = cached.tgt;
+            }
+            else
+            {
+                evtId = GetOrRegisterAnyLocked<TEvent>().Id;
+                id = (Id)GetOrRegisterAnyLocked<T>();
+                _emitKeyCache1[key] = (evtId, id);
+            }
         }
-        EmitInternal(evt, entity, id, propagateRel);
+        EmitInternal(evtId, entity, id, propagateRel);
     }
 
     public void Emit<TEvent, TR, TT>(EntityId entity, EntityId propagateRel = default)
         where TEvent : struct where TR : struct where TT : struct
     {
-        EntityId evt;
+        var key = (typeof(TEvent), typeof(TR), typeof(TT));
+        uint evtId;
         Id pair;
         lock (_lock)
         {
-            evt = GetOrRegisterAnyLocked<TEvent>();
-            var rel = GetOrRegisterAnyLocked<TR>();
-            var tgt = GetOrRegisterAnyLocked<TT>();
-            pair = Id.MakePair(rel, tgt);
+            if (_emitKeyCache2.TryGetValue(key, out var cached))
+            {
+                evtId = cached.evtId;
+                pair = cached.tgt;
+            }
+            else
+            {
+                evtId = GetOrRegisterAnyLocked<TEvent>().Id;
+                var rel = GetOrRegisterAnyLocked<TR>();
+                var tgt = GetOrRegisterAnyLocked<TT>();
+                pair = Id.MakePair(rel, tgt);
+                _emitKeyCache2[key] = (evtId, pair);
+            }
         }
-        EmitInternal(evt, entity, pair, propagateRel);
+        EmitInternal(evtId, entity, pair, propagateRel);
     }
 
-    private void EmitInternal(EntityId evt, EntityId entity, Id id, EntityId propagateRel)
+    private void EmitInternal(uint evtId, EntityId entity, Id id, EntityId propagateRel)
     {
         Action<World, EntityId>? a;
-        lock (_lock) { _customObs.TryGetValue((evt.Id, id), out a); }
+        lock (_lock) { _customObs.TryGetValue((evtId, id), out a); }
         if (a == null) return;
 
         if (!propagateRel.IsValid)
@@ -315,12 +337,35 @@ public sealed partial class World
 
         // Collect BFS chain under lock so callbacks fire outside lock.
         // Allows callbacks to mutate world freely (Defer still respected).
+        // Buffers pooled per-World; reentrancy (callback re-emits) falls back
+        // to fresh allocs to avoid mid-iteration mutation.
         List<EntityId> chain;
+        HashSet<uint> visited;
+        Queue<EntityId> queue;
+        bool pooled;
         lock (_lock)
         {
-            chain = new List<EntityId> { entity };
-            var visited = new HashSet<uint> { entity.Id };
-            var queue = new Queue<EntityId>();
+            if (!_emitBufBusy)
+            {
+                _emitBufBusy = true;
+                chain = _emitChainBuf ??= new List<EntityId>();
+                visited = _emitVisitedBuf ??= new HashSet<uint>();
+                queue = _emitQueueBuf ??= new Queue<EntityId>();
+                chain.Clear();
+                visited.Clear();
+                queue.Clear();
+                pooled = true;
+            }
+            else
+            {
+                chain = new List<EntityId>();
+                visited = new HashSet<uint>();
+                queue = new Queue<EntityId>();
+                pooled = false;
+            }
+
+            chain.Add(entity);
+            visited.Add(entity.Id);
             queue.Enqueue(entity);
             uint relId = propagateRel.Id;
             while (queue.Count > 0)
@@ -342,7 +387,14 @@ public sealed partial class World
                 }
             }
         }
-        foreach (var e in chain) a(this, e);
+        try
+        {
+            foreach (var e in chain) a(this, e);
+        }
+        finally
+        {
+            if (pooled) lock (_lock) { _emitBufBusy = false; }
+        }
     }
 
     // Pair (TR, *) — relation typed, target wildcard. For query matches.
