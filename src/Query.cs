@@ -124,7 +124,7 @@ public abstract class QueryBase
             var t = tables[i];
             if (t == null) continue;
             if (QueryUtil.Matches(t, _with, _without, _orGroups, _world.Wildcard.Id,
-                    worldForInherit, _inherited, _termTraversals))
+                    worldForInherit, _inherited, _termTraversals, _world))
             { _matched.Add(t); added = true; }
         }
         _matchedUpTo = tables.Count - 1;
@@ -233,11 +233,18 @@ internal static class QueryUtil
     // Without stays literal (Self-only) — flecs parity.
     public static bool Matches(Table t, Id[] with, Id[] without, List<Id[]>? orGroups, uint wildcard,
         World? worldForInherit = null, bool inheritedDefault = false,
-        Dictionary<Id, TermTraversal>? termTraversals = null)
+        Dictionary<Id, TermTraversal>? termTraversals = null,
+        World? worldForSparse = null)
     {
         for (int i = 0; i < with.Length; i++)
+        {
+            // Sparse terms don't gate archetype match — value lives in
+            // SparseStorage<T> outside the archetype. Per-row Has check
+            // happens during iteration (RowEnumerator filter path).
+            if (worldForSparse != null && worldForSparse.IsSparseId(with[i])) continue;
             if (!MatchesIdOrInherited(t, with[i], wildcard, worldForInherit, inheritedDefault, termTraversals))
                 return false;
+        }
         for (int i = 0; i < without.Length; i++)
             if (MatchesId(t, without[i], wildcard)) return false;
         if (orGroups != null)
@@ -247,8 +254,11 @@ internal static class QueryUtil
                 var group = orGroups[g];
                 bool any = false;
                 for (int i = 0; i < group.Length; i++)
+                {
+                    if (worldForSparse != null && worldForSparse.IsSparseId(group[i])) { any = true; break; }
                     if (MatchesIdOrInherited(t, group[i], wildcard, worldForInherit, inheritedDefault, termTraversals))
                     { any = true; break; }
+                }
                 if (!any) return false;
             }
         }

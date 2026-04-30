@@ -631,6 +631,16 @@ public sealed partial class World
     {
         ref var rec = ref GetSlot(entity.Id);
         if (!rec.Alive || rec.Generation != entity.Generation) return;
+        // Sparse path — route to SparseStorage<T>.Remove via dispatch on
+        // the storage's interface (the typed Remove path lives in
+        // RemoveSparseLocked<T>; the command-queued generic Remove lands
+        // here and must call the type-erased equivalent).
+        if (!compId.IsPair && _sparseIds.Contains(compId.Component))
+        {
+            if (_sparseStorage.TryGetValue(compId.Component, out var storage))
+                storage.OnEntityDelete(this, entity);
+            return;
+        }
         var src = _tablesById[rec.TableId]!;
         if (!src.Has(compId)) return;
         // Fire OnRemove + Dtor while data still in src (user can read it).

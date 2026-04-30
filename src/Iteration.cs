@@ -52,6 +52,7 @@ internal sealed class FilterState<T1> where T1 : struct
     public Column<T1>? Col1;
     public int Shared1;
     public Bitset? Bs1;
+    public SparseStorage<T1>? Sparse1;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1>>? _pool;
@@ -63,7 +64,7 @@ internal sealed class FilterState<T1> where T1 : struct
     }
     public static void Return(FilterState<T1> f)
     {
-        f.Col1 = null; f.Bs1 = null; f.CurTable = null;
+        f.Col1 = null; f.Bs1 = null; f.Sparse1 = null; f.CurTable = null;
         _pool!.Push(f);
     }
 }
@@ -73,6 +74,7 @@ internal sealed class FilterState<T1, T2> where T1 : struct where T2 : struct
     public Column<T1>? Col1; public Column<T2>? Col2;
     public int Shared1, Shared2;
     public Bitset? Bs1, Bs2;
+    public SparseStorage<T1>? Sparse1; public SparseStorage<T2>? Sparse2;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1, T2>>? _pool;
@@ -84,7 +86,8 @@ internal sealed class FilterState<T1, T2> where T1 : struct where T2 : struct
     }
     public static void Return(FilterState<T1, T2> f)
     {
-        f.Col1 = null; f.Col2 = null; f.Bs1 = null; f.Bs2 = null; f.CurTable = null;
+        f.Col1 = null; f.Col2 = null; f.Bs1 = null; f.Bs2 = null;
+        f.Sparse1 = null; f.Sparse2 = null; f.CurTable = null;
         _pool!.Push(f);
     }
 }
@@ -95,6 +98,7 @@ internal sealed class FilterState<T1, T2, T3>
     public Column<T1>? Col1; public Column<T2>? Col2; public Column<T3>? Col3;
     public int Shared1, Shared2, Shared3;
     public Bitset? Bs1, Bs2, Bs3;
+    public SparseStorage<T1>? Sparse1; public SparseStorage<T2>? Sparse2; public SparseStorage<T3>? Sparse3;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1, T2, T3>>? _pool;
@@ -107,7 +111,9 @@ internal sealed class FilterState<T1, T2, T3>
     public static void Return(FilterState<T1, T2, T3> f)
     {
         f.Col1 = null; f.Col2 = null; f.Col3 = null;
-        f.Bs1 = null; f.Bs2 = null; f.Bs3 = null; f.CurTable = null;
+        f.Bs1 = null; f.Bs2 = null; f.Bs3 = null;
+        f.Sparse1 = null; f.Sparse2 = null; f.Sparse3 = null;
+        f.CurTable = null;
         _pool!.Push(f);
     }
 }
@@ -119,6 +125,8 @@ internal sealed class FilterState<T1, T2, T3, T4>
     public Column<T3>? Col3; public Column<T4>? Col4;
     public int Shared1, Shared2, Shared3, Shared4;
     public Bitset? Bs1, Bs2, Bs3, Bs4;
+    public SparseStorage<T1>? Sparse1; public SparseStorage<T2>? Sparse2;
+    public SparseStorage<T3>? Sparse3; public SparseStorage<T4>? Sparse4;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1, T2, T3, T4>>? _pool;
@@ -131,7 +139,9 @@ internal sealed class FilterState<T1, T2, T3, T4>
     public static void Return(FilterState<T1, T2, T3, T4> f)
     {
         f.Col1 = null; f.Col2 = null; f.Col3 = null; f.Col4 = null;
-        f.Bs1 = null; f.Bs2 = null; f.Bs3 = null; f.Bs4 = null; f.CurTable = null;
+        f.Bs1 = null; f.Bs2 = null; f.Bs3 = null; f.Bs4 = null;
+        f.Sparse1 = null; f.Sparse2 = null; f.Sparse3 = null; f.Sparse4 = null;
+        f.CurTable = null;
         _pool!.Push(f);
     }
 }
@@ -143,6 +153,8 @@ internal sealed class FilterState<T1, T2, T3, T4, T5>
     public Column<T4>? Col4; public Column<T5>? Col5;
     public int Shared1, Shared2, Shared3, Shared4, Shared5;
     public Bitset? Bs1, Bs2, Bs3, Bs4, Bs5;
+    public SparseStorage<T1>? Sparse1; public SparseStorage<T2>? Sparse2; public SparseStorage<T3>? Sparse3;
+    public SparseStorage<T4>? Sparse4; public SparseStorage<T5>? Sparse5;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1, T2, T3, T4, T5>>? _pool;
@@ -156,6 +168,7 @@ internal sealed class FilterState<T1, T2, T3, T4, T5>
     {
         f.Col1 = null; f.Col2 = null; f.Col3 = null; f.Col4 = null; f.Col5 = null;
         f.Bs1 = null; f.Bs2 = null; f.Bs3 = null; f.Bs4 = null; f.Bs5 = null;
+        f.Sparse1 = null; f.Sparse2 = null; f.Sparse3 = null; f.Sparse4 = null; f.Sparse5 = null;
         f.CurTable = null;
         _pool!.Push(f);
     }
@@ -169,6 +182,8 @@ internal sealed class FilterState<T1, T2, T3, T4, T5, T6>
     public Column<T4>? Col4; public Column<T5>? Col5; public Column<T6>? Col6;
     public int Shared1, Shared2, Shared3, Shared4, Shared5, Shared6;
     public Bitset? Bs1, Bs2, Bs3, Bs4, Bs5, Bs6;
+    public SparseStorage<T1>? Sparse1; public SparseStorage<T2>? Sparse2; public SparseStorage<T3>? Sparse3;
+    public SparseStorage<T4>? Sparse4; public SparseStorage<T5>? Sparse5; public SparseStorage<T6>? Sparse6;
     public Table? CurTable;
 
     [ThreadStatic] private static Stack<FilterState<T1, T2, T3, T4, T5, T6>>? _pool;
@@ -184,6 +199,8 @@ internal sealed class FilterState<T1, T2, T3, T4, T5, T6>
         f.Col4 = null; f.Col5 = null; f.Col6 = null;
         f.Bs1 = null; f.Bs2 = null; f.Bs3 = null;
         f.Bs4 = null; f.Bs5 = null; f.Bs6 = null;
+        f.Sparse1 = null; f.Sparse2 = null; f.Sparse3 = null;
+        f.Sparse4 = null; f.Sparse5 = null; f.Sparse6 = null;
         f.CurTable = null;
         _pool!.Push(f);
     }
@@ -211,7 +228,9 @@ public ref struct RowEnumerator<T1> where T1 : struct
     internal RowEnumerator(Query<T1> q)
     {
         _query = q;
-        _hasFilter = q._anyInheritance || q._t1Optional || q._world.IsCanToggleId(q._c1);
+        _hasFilter = q._anyInheritance || q._t1Optional
+            || q._world.IsCanToggleId(q._c1)
+            || q._world.IsSparseId(q._c1);
         _filter = _hasFilter ? FilterState<T1>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -261,8 +280,11 @@ public ref struct RowEnumerator<T1> where T1 : struct
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId);
+            else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
             return true;
         }
         return false;
@@ -287,12 +309,23 @@ public ref struct RowEnumerator<T1> where T1 : struct
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            if (col1 == null && !_query._t1Optional) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Shared1 = s1; f.CurTable = t;
-            _stride1 = (s1 < 0 && col1 != null) ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
+            f.CurTable = t;
+            if (_query._world.IsSparseId(_query._c1))
+            {
+                f.Sparse1 = (SparseStorage<T1>)_query._world._sparseStorage[_query._c1.Component];
+                f.Col1 = null; f.Shared1 = -1; f.Bs1 = null;
+                _stride1 = 0;
+            }
+            else
+            {
+                f.Sparse1 = null;
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                if (col1 == null && !_query._t1Optional) continue;
+                f.Col1 = col1; f.Shared1 = s1;
+                _stride1 = (s1 < 0 && col1 != null) ? 1 : 0;
+                f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
+            }
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
@@ -333,7 +366,8 @@ public ref struct RowEnumerator<T1, T2>
     {
         _query = q;
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional
-            || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2);
+            || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2);
         _filter = _hasFilter ? FilterState<T1, T2>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -385,10 +419,15 @@ public ref struct RowEnumerator<T1, T2>
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
-            _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId);
+            else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            if (f.Sparse2 != null) _ptr2.Value = ref f.Sparse2.GetRef(entId);
+            else _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
             return true;
         }
         return false;
@@ -398,6 +437,7 @@ public ref struct RowEnumerator<T1, T2>
     private bool MoveNextSlow()
     {
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {
             _tableIdx++;
@@ -415,17 +455,35 @@ public ref struct RowEnumerator<T1, T2>
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            if ((col1 == null && !_query._t1Optional) || (col2 == null && !_query._t2Optional)) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Col2 = col2;
-            f.Shared1 = s1; f.Shared2 = s2;
             f.CurTable = t;
-            _stride1 = (s1 < 0 && col1 != null) ? 1 : 0;
-            _stride2 = (s2 < 0 && col2 != null) ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
-            f.Bs2 = _query.ResolveBitset(t, _query._c2, s2);
+            bool skip = false;
+            if (w.IsSparseId(_query._c1))
+            {
+                f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component];
+                f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0;
+            }
+            else
+            {
+                f.Sparse1 = null;
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                if (col1 == null && !_query._t1Optional) { skip = true; }
+                else { f.Col1 = col1; f.Shared1 = s1; _stride1 = (s1 < 0 && col1 != null) ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
+            }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c2))
+            {
+                f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component];
+                f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0;
+            }
+            else
+            {
+                f.Sparse2 = null;
+                var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+                if (col2 == null && !_query._t2Optional) { skip = true; }
+                else { f.Col2 = col2; f.Shared2 = s2; _stride2 = (s2 < 0 && col2 != null) ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
+            }
+            if (skip) continue;
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
@@ -468,7 +526,9 @@ public ref struct RowEnumerator<T1, T2, T3>
         _query = q;
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3);
+            || q._world.IsCanToggleId(q._c3)
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
+            || q._world.IsSparseId(q._c3);
         _filter = _hasFilter ? FilterState<T1, T2, T3>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -523,12 +583,19 @@ public ref struct RowEnumerator<T1, T2, T3>
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
-            _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
-            _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId);
+            else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            if (f.Sparse2 != null) _ptr2.Value = ref f.Sparse2.GetRef(entId);
+            else _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
+            if (f.Sparse3 != null) _ptr3.Value = ref f.Sparse3.GetRef(entId);
+            else _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
             return true;
         }
         return false;
@@ -538,6 +605,7 @@ public ref struct RowEnumerator<T1, T2, T3>
     private bool MoveNextSlow()
     {
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {
             _tableIdx++;
@@ -557,22 +625,39 @@ public ref struct RowEnumerator<T1, T2, T3>
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            if ((col1 == null && !_query._t1Optional)
-                || (col2 == null && !_query._t2Optional)
-                || (col3 == null && !_query._t3Optional)) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Col2 = col2; f.Col3 = col3;
-            f.Shared1 = s1; f.Shared2 = s2; f.Shared3 = s3;
             f.CurTable = t;
-            _stride1 = (s1 < 0 && col1 != null) ? 1 : 0;
-            _stride2 = (s2 < 0 && col2 != null) ? 1 : 0;
-            _stride3 = (s3 < 0 && col3 != null) ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
-            f.Bs2 = _query.ResolveBitset(t, _query._c2, s2);
-            f.Bs3 = _query.ResolveBitset(t, _query._c3, s3);
+            bool skip = false;
+            if (w.IsSparseId(_query._c1))
+            { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
+            else
+            {
+                f.Sparse1 = null;
+                var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
+                if (col1 == null && !_query._t1Optional) skip = true;
+                else { f.Col1 = col1; f.Shared1 = s1; _stride1 = (s1 < 0 && col1 != null) ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
+            }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c2))
+            { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
+            else
+            {
+                f.Sparse2 = null;
+                var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
+                if (col2 == null && !_query._t2Optional) skip = true;
+                else { f.Col2 = col2; f.Shared2 = s2; _stride2 = (s2 < 0 && col2 != null) ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
+            }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c3))
+            { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
+            else
+            {
+                f.Sparse3 = null;
+                var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
+                if (col3 == null && !_query._t3Optional) skip = true;
+                else { f.Col3 = col3; f.Shared3 = s3; _stride3 = (s3 < 0 && col3 != null) ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s3); }
+            }
+            if (skip) continue;
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
@@ -616,7 +701,9 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         _query = q;
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4);
+            || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
+            || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -674,14 +761,19 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
-            _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
-            _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
-            _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse4 != null) { if (!f.Sparse4.Has(entId)) { _rowIdx++; continue; } }
+            else if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId); else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            if (f.Sparse2 != null) _ptr2.Value = ref f.Sparse2.GetRef(entId); else _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
+            if (f.Sparse3 != null) _ptr3.Value = ref f.Sparse3.GetRef(entId); else _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
+            if (f.Sparse4 != null) _ptr4.Value = ref f.Sparse4.GetRef(entId); else _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
             return true;
         }
         return false;
@@ -691,6 +783,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     private bool MoveNextSlow()
     {
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {
             _tableIdx++;
@@ -712,23 +805,21 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
-            if (col1 == null || col2 == null || col3 == null || col4 == null) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Col2 = col2; f.Col3 = col3; f.Col4 = col4;
-            f.Shared1 = s1; f.Shared2 = s2; f.Shared3 = s3; f.Shared4 = s4;
             f.CurTable = t;
-            _stride1 = s1 < 0 ? 1 : 0;
-            _stride2 = s2 < 0 ? 1 : 0;
-            _stride3 = s3 < 0 ? 1 : 0;
-            _stride4 = s4 < 0 ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
-            f.Bs2 = _query.ResolveBitset(t, _query._c2, s2);
-            f.Bs3 = _query.ResolveBitset(t, _query._c3, s3);
-            f.Bs4 = _query.ResolveBitset(t, _query._c4, s4);
+            bool skip = false;
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (skip) continue;
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
@@ -771,7 +862,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5);
+            || q._world.IsCanToggleId(q._c5)
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
+            || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
+            || q._world.IsSparseId(q._c5);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -833,16 +927,17 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs5 != null && !f.Bs5.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
-            _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
-            _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
-            _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
-            _ptr5.Value = ref RowEnumeratorUtil.Resolve(f.Col5, f.Shared5, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse4 != null) { if (!f.Sparse4.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse5 != null) { if (!f.Sparse5.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs5 != null && !f.Bs5.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId); else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            if (f.Sparse2 != null) _ptr2.Value = ref f.Sparse2.GetRef(entId); else _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
+            if (f.Sparse3 != null) _ptr3.Value = ref f.Sparse3.GetRef(entId); else _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
+            if (f.Sparse4 != null) _ptr4.Value = ref f.Sparse4.GetRef(entId); else _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
+            if (f.Sparse5 != null) _ptr5.Value = ref f.Sparse5.GetRef(entId); else _ptr5.Value = ref RowEnumeratorUtil.Resolve(f.Col5, f.Shared5, _rowIdx);
             return true;
         }
         return false;
@@ -852,6 +947,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     private bool MoveNextSlow()
     {
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {
             _tableIdx++;
@@ -875,26 +971,24 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
-            var (col5, s5) = _query.ResolveSource<T5>(t, _query._c5);
-            if (col1 == null || col2 == null || col3 == null || col4 == null || col5 == null) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Col2 = col2; f.Col3 = col3; f.Col4 = col4; f.Col5 = col5;
-            f.Shared1 = s1; f.Shared2 = s2; f.Shared3 = s3; f.Shared4 = s4; f.Shared5 = s5;
             f.CurTable = t;
-            _stride1 = s1 < 0 ? 1 : 0;
-            _stride2 = s2 < 0 ? 1 : 0;
-            _stride3 = s3 < 0 ? 1 : 0;
-            _stride4 = s4 < 0 ? 1 : 0;
-            _stride5 = s5 < 0 ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
-            f.Bs2 = _query.ResolveBitset(t, _query._c2, s2);
-            f.Bs3 = _query.ResolveBitset(t, _query._c3, s3);
-            f.Bs4 = _query.ResolveBitset(t, _query._c4, s4);
-            f.Bs5 = _query.ResolveBitset(t, _query._c5, s5);
+            bool skip = false;
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; _stride5 = 0; }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; _stride5 = s < 0 ? 1 : 0; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            if (skip) continue;
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
@@ -938,7 +1032,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6);
+            || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6)
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
+            || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
+            || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -1003,18 +1100,19 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         var f = _filter!;
         while (_rowIdx < _count)
         {
-            if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs5 != null && !f.Bs5.Get(_rowIdx)) { _rowIdx++; continue; }
-            if (f.Bs6 != null && !f.Bs6.Get(_rowIdx)) { _rowIdx++; continue; }
-            _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
-            _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
-            _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
-            _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
-            _ptr5.Value = ref RowEnumeratorUtil.Resolve(f.Col5, f.Shared5, _rowIdx);
-            _ptr6.Value = ref RowEnumeratorUtil.Resolve(f.Col6, f.Shared6, _rowIdx);
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse4 != null) { if (!f.Sparse4.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs4 != null && !f.Bs4.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse5 != null) { if (!f.Sparse5.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs5 != null && !f.Bs5.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse6 != null) { if (!f.Sparse6.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs6 != null && !f.Bs6.Get(_rowIdx)) { _rowIdx++; continue; }
+            if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId); else _ptr1.Value = ref RowEnumeratorUtil.Resolve(f.Col1, f.Shared1, _rowIdx);
+            if (f.Sparse2 != null) _ptr2.Value = ref f.Sparse2.GetRef(entId); else _ptr2.Value = ref RowEnumeratorUtil.Resolve(f.Col2, f.Shared2, _rowIdx);
+            if (f.Sparse3 != null) _ptr3.Value = ref f.Sparse3.GetRef(entId); else _ptr3.Value = ref RowEnumeratorUtil.Resolve(f.Col3, f.Shared3, _rowIdx);
+            if (f.Sparse4 != null) _ptr4.Value = ref f.Sparse4.GetRef(entId); else _ptr4.Value = ref RowEnumeratorUtil.Resolve(f.Col4, f.Shared4, _rowIdx);
+            if (f.Sparse5 != null) _ptr5.Value = ref f.Sparse5.GetRef(entId); else _ptr5.Value = ref RowEnumeratorUtil.Resolve(f.Col5, f.Shared5, _rowIdx);
+            if (f.Sparse6 != null) _ptr6.Value = ref f.Sparse6.GetRef(entId); else _ptr6.Value = ref RowEnumeratorUtil.Resolve(f.Col6, f.Shared6, _rowIdx);
             return true;
         }
         return false;
@@ -1024,6 +1122,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     private bool MoveNextSlow()
     {
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {
             _tableIdx++;
@@ -1049,32 +1148,27 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
                 _rowIdx = 0;
                 return true;
             }
-            var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
-            var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
-            var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
-            var (col4, s4) = _query.ResolveSource<T4>(t, _query._c4);
-            var (col5, s5) = _query.ResolveSource<T5>(t, _query._c5);
-            var (col6, s6) = _query.ResolveSource<T6>(t, _query._c6);
-            if (col1 == null || col2 == null || col3 == null
-                || col4 == null || col5 == null || col6 == null) continue;
             var f = _filter!;
-            f.Col1 = col1; f.Col2 = col2; f.Col3 = col3;
-            f.Col4 = col4; f.Col5 = col5; f.Col6 = col6;
-            f.Shared1 = s1; f.Shared2 = s2; f.Shared3 = s3;
-            f.Shared4 = s4; f.Shared5 = s5; f.Shared6 = s6;
             f.CurTable = t;
-            _stride1 = s1 < 0 ? 1 : 0;
-            _stride2 = s2 < 0 ? 1 : 0;
-            _stride3 = s3 < 0 ? 1 : 0;
-            _stride4 = s4 < 0 ? 1 : 0;
-            _stride5 = s5 < 0 ? 1 : 0;
-            _stride6 = s6 < 0 ? 1 : 0;
-            f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
-            f.Bs2 = _query.ResolveBitset(t, _query._c2, s2);
-            f.Bs3 = _query.ResolveBitset(t, _query._c3, s3);
-            f.Bs4 = _query.ResolveBitset(t, _query._c4, s4);
-            f.Bs5 = _query.ResolveBitset(t, _query._c5, s5);
-            f.Bs6 = _query.ResolveBitset(t, _query._c6, s6);
+            bool skip = false;
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; _stride5 = 0; }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; _stride5 = s < 0 ? 1 : 0; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            if (skip) continue;
+            if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; _stride6 = 0; }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; _stride6 = s < 0 ? 1 : 0; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            if (skip) continue;
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;

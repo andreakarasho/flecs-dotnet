@@ -11,16 +11,19 @@ def t_constraints(n):
 
 def gen_filterstate(n):
     cols = " ".join(f"public Column<T{i}>? Col{i};" for i in range(1, n + 1))
+    sparses = " ".join(f"public SparseStorage<T{i}>? Sparse{i};" for i in range(1, n + 1))
     shareds = ", ".join(f"Shared{i}" for i in range(1, n + 1))
     bs = ", ".join(f"Bs{i}" for i in range(1, n + 1))
     null_cols = " ".join(f"f.Col{i} = null;" for i in range(1, n + 1))
     null_bs = " ".join(f"f.Bs{i} = null;" for i in range(1, n + 1))
+    null_sparse = " ".join(f"f.Sparse{i} = null;" for i in range(1, n + 1))
     cls = f"FilterState<{t_list(n)}>"
     return f"""
 internal sealed class {cls}
     {t_constraints(n)}
 {{
     {cols}
+    {sparses}
     public int {shareds};
     public Bitset? {bs};
     public Table? CurTable;
@@ -34,7 +37,7 @@ internal sealed class {cls}
     }}
     public static void Return({cls} f)
     {{
-        {null_cols} {null_bs} f.CurTable = null;
+        {null_cols} {null_bs} {null_sparse} f.CurTable = null;
         _pool!.Push(f);
     }}
 }}
@@ -111,7 +114,9 @@ def gen_row_enum(n):
     ptrs = "\n".join(f"    private Ptr<T{i}> _ptr{i};" for i in range(1, n + 1))
     strides = ", ".join(f"_stride{i}" for i in range(1, n + 1))
 
-    ctor_check = "\n            || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
+    ctor_toggle = "\n            || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
+    ctor_sparse = "\n            || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
+    ctor_check = ctor_toggle + "\n            || " + ctor_sparse
     stride_init = " ".join(f"_stride{i} = 1;" for i in range(1, n + 1))
 
     component_props = "\n".join(
@@ -125,11 +130,13 @@ def gen_row_enum(n):
     fast_advance = "\n".join(
         f"                _ptr{i}.Value = ref Unsafe.Add(ref _ptr{i}.Value, 1);" for i in range(1, n + 1))
 
+    # Filter-path per-term skip: prefer sparse-Has when sparse, else bitset.
     bitset_skips = "\n".join(
-        f"            if (f.Bs{i} != null && !f.Bs{i}.Get(_rowIdx)) {{ _rowIdx++; continue; }}"
+        f"            if (f.Sparse{i} != null) {{ if (!f.Sparse{i}.Has(entId)) {{ _rowIdx++; continue; }} }} else if (f.Bs{i} != null && !f.Bs{i}.Get(_rowIdx)) {{ _rowIdx++; continue; }}"
         for i in range(1, n + 1))
+    # Filter-path per-term ptr resolve: sparse GetRef vs Column Resolve.
     filter_assigns = "\n".join(
-        f"            _ptr{i}.Value = ref RowEnumeratorUtil.Resolve(f.Col{i}, f.Shared{i}, _rowIdx);"
+        f"            if (f.Sparse{i} != null) _ptr{i}.Value = ref f.Sparse{i}.GetRef(entId); else _ptr{i}.Value = ref RowEnumeratorUtil.Resolve(f.Col{i}, f.Shared{i}, _rowIdx);"
         for i in range(1, n + 1))
 
     fast_table_setup = "\n".join(
@@ -139,16 +146,15 @@ def gen_row_enum(n):
         f"                _ptr{i}.Value = ref MemoryMarshal.GetReference(c{i}.AsSpan());"
         for i in range(1, n + 1))
 
-    resolve_calls = "\n".join(
-        f"            var (col{i}, s{i}) = _query.ResolveSource<T{i}>(t, _query._c{i});"
-        for i in range(1, n + 1))
-    null_check = " || ".join(f"col{i} == null" for i in range(1, n + 1))
-    f_col_assign = " ".join(f"f.Col{i} = col{i};" for i in range(1, n + 1))
-    f_shared_assign = " ".join(f"f.Shared{i} = s{i};" for i in range(1, n + 1))
-    stride_assign = "\n".join(f"            _stride{i} = s{i} < 0 ? 1 : 0;" for i in range(1, n + 1))
-    bs_resolve = "\n".join(
-        f"            f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s{i});"
-        for i in range(1, n + 1))
+    # Per-term per-table setup: sparse → cache SparseStorage; archetype →
+    # Resolve column + bitset. Skip table when archetype term missing.
+    setup_lines = []
+    for i in range(1, n + 1):
+        setup_lines.append(
+            f"            if (w.IsSparseId(_query._c{i})) {{ f.Sparse{i} = (SparseStorage<T{i}>)w._sparseStorage[_query._c{i}.Component]; f.Col{i} = null; f.Shared{i} = -1; f.Bs{i} = null; _stride{i} = 0; }}\n"
+            f"            else {{ f.Sparse{i} = null; var (c, s) = _query.ResolveSource<T{i}>(t, _query._c{i}); if (c == null) skip = true; else {{ f.Col{i} = c; f.Shared{i} = s; _stride{i} = s < 0 ? 1 : 0; f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s); }} }}\n"
+            f"            if (skip) continue;")
+    per_term_setup = "\n".join(setup_lines)
 
     return f"""
 public ref struct {R}
@@ -219,6 +225,7 @@ public ref struct {R}
         var f = _filter!;
         while (_rowIdx < _count)
         {{
+            uint entId = f.CurTable!.Entities[_rowIdx].Id;
 {bitset_skips}
 {filter_assigns}
             return true;
@@ -230,6 +237,7 @@ public ref struct {R}
     private bool MoveNextSlow()
     {{
         var matched = CollectionsMarshal.AsSpan(_query._matched);
+        var w = _query._world;
         while (true)
         {{
             _tableIdx++;
@@ -245,14 +253,10 @@ public ref struct {R}
                 _rowIdx = 0;
                 return true;
             }}
-{resolve_calls}
-            if ({null_check}) continue;
             var f = _filter!;
-            {f_col_assign}
-            {f_shared_assign}
             f.CurTable = t;
-{stride_assign}
-{bs_resolve}
+            bool skip = false;
+{per_term_setup}
             _count = n;
             _rowIdx = 0;
             if (AdvanceFiltered()) return true;
