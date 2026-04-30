@@ -125,4 +125,15 @@ internal static class ThrowHelper
         => throw new InvalidOperationException(
             $"DeletePolicy.Panic: deleting #{deletedId} would orphan id {idValue} on " +
             $"#{holderId} (and possibly others).");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void NoCurrentSystem()
+        => throw new InvalidOperationException("SystemCtx: no system currently dispatching.");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void SystemCtxWrongType(Type t)
+        => throw new InvalidOperationException(
+            $"SystemCtx<{t.Name}>: ctx is null or wrong type.");
 }

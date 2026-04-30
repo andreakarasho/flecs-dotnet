@@ -93,14 +93,40 @@ public sealed partial class World
     // skips rows where any required term's bit is clear. Mirrors flecs
     // EcsCanToggle.
     public readonly EntityId CanToggle;
-    // Builtin phases. Progress() runs systems in this order. Mirror flecs
-    // builtin pipeline phase ordering.
+    // Phase  — reserved tag. Marks an entity as a pipeline phase. Builtin phases
+    //          are tagged automatically; user phases via world.Phase().
+    // DependsOn — reserved relation. (DependsOn, predecessor) on a phase X means
+    //             X runs after predecessor in topological order. Phase ordering
+    //             is the topological sort over DependsOn across all Phase-tagged
+    //             entities. Mirrors flecs EcsPhase / EcsDependsOn.
+    public readonly EntityId Phase;
+    public readonly EntityId DependsOn;
+    // System  — reserved tag. Marks an entity as a system. Auto-added to every
+    //           SystemHandle.Entity. Pipeline filters typically include this
+    //           in their With-set so they only match systems.
+    // Pipeline — reserved tag. Marks an entity as a pipeline (entity carrying a
+    //            PipelineFilter component that selects which systems run).
+    public readonly EntityId SystemTag;
+    public readonly EntityId Pipeline;
+    // Builtin phases. Progress() runs systems in topological order over the
+    // DependsOn chain wired below. Mirror flecs builtin pipeline phase ordering.
+    // OnStart fires once on the first Progress call only — startup phase.
+    public readonly EntityId OnStart;
     public readonly EntityId OnLoad, PostLoad, PreUpdate, OnUpdate,
                               OnValidate, PostUpdate, PreStore, OnStore;
 
-    // Phase-ordered list — used by Progress to dispatch systems.
-    private readonly EntityId[] _phaseOrder;
+    // Phase-ordered list — rebuilt lazily via topo sort over DependsOn pairs
+    // when _pipelineDirty. Includes builtin + user phases. OnStart not in this
+    // list; dispatched separately on first Progress.
+    private List<EntityId> _phaseOrder = new();
+    // True until the first Progress() runs OnStart-phase systems. After flip,
+    // OnStart-phase systems never run again.
+    private bool _onStartFired;
     private readonly List<SystemHandle> _systems = new();
+    // Active pipeline. Default invalid = no filter, every System matches.
+    // Custom pipelines via world.Pipeline().With/Without().Build() then
+    // world.SetPipeline(p) — flips _pipelineDirty + filters systems on rebuild.
+    internal EntityId _activePipeline;
 
     // World-level table-creation event. Fires after a new archetype table is
     // materialized. Not fired retroactively for tables that existed before
@@ -207,6 +233,11 @@ public sealed partial class World
         DontInherit = CreateEntityCore();
         Traversable = CreateEntityCore();
         CanToggle = CreateEntityCore();
+        Phase = CreateEntityCore();
+        DependsOn = CreateEntityCore();
+        SystemTag = CreateEntityCore();
+        Pipeline = CreateEntityCore();
+        OnStart = CreateEntityCore();
         OnLoad = CreateEntityCore();
         PostLoad = CreateEntityCore();
         PreUpdate = CreateEntityCore();
@@ -215,11 +246,28 @@ public sealed partial class World
         PostUpdate = CreateEntityCore();
         PreStore = CreateEntityCore();
         OnStore = CreateEntityCore();
-        _phaseOrder = new[]
-        {
-            OnLoad, PostLoad, PreUpdate, OnUpdate,
-            OnValidate, PostUpdate, PreStore, OnStore,
-        };
+        // Tag every phase with the Phase reserved tag — RebuildPipelineLocked
+        // discovers phases by scanning entities that hold this tag.
+        EnsureHasIdLocked(OnStart, (Id)Phase);
+        EnsureHasIdLocked(OnLoad, (Id)Phase);
+        EnsureHasIdLocked(PostLoad, (Id)Phase);
+        EnsureHasIdLocked(PreUpdate, (Id)Phase);
+        EnsureHasIdLocked(OnUpdate, (Id)Phase);
+        EnsureHasIdLocked(OnValidate, (Id)Phase);
+        EnsureHasIdLocked(PostUpdate, (Id)Phase);
+        EnsureHasIdLocked(PreStore, (Id)Phase);
+        EnsureHasIdLocked(OnStore, (Id)Phase);
+        // Wire builtin DependsOn chain. Topo sort yields canonical order.
+        EnsureHasIdLocked(PostLoad, Id.MakePair(DependsOn, OnLoad));
+        EnsureHasIdLocked(PreUpdate, Id.MakePair(DependsOn, PostLoad));
+        EnsureHasIdLocked(OnUpdate, Id.MakePair(DependsOn, PreUpdate));
+        EnsureHasIdLocked(OnValidate, Id.MakePair(DependsOn, OnUpdate));
+        EnsureHasIdLocked(PostUpdate, Id.MakePair(DependsOn, OnValidate));
+        EnsureHasIdLocked(PreStore, Id.MakePair(DependsOn, PostUpdate));
+        EnsureHasIdLocked(OnStore, Id.MakePair(DependsOn, PreStore));
+        // DependsOn is acyclic — phase chains can't form cycles.
+        _acyclicRelIds.Add(DependsOn.Id);
+        _pipelineDirty = true;
         // Builtin: ChildOf cascades on parent delete.
         _onDeleteTarget[(Id)ChildOf] = DeletePolicy.Delete;
         // Builtin: ChildOf is exclusive — entity has at most one parent.

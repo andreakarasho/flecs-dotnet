@@ -45,7 +45,17 @@ public sealed partial class World
     public SystemHandle System(string name, EntityId phase, SystemAction action)
     {
         var h = new SystemHandle(name, phase, action);
-        lock (_lock) { _systems.Add(h); _pipelineDirty = true; }
+        lock (_lock)
+        {
+            // Back the system with an entity tagged SystemTag. User can add
+            // custom tags via world.Add(h.Entity, myTag) for pipeline filters.
+            var ent = CreateEntityCore();
+            EnsureHasIdLocked(ent, (Id)SystemTag);
+            h.Entity = ent;
+            _systems.Add(h);
+            _pipelineDirty = true;
+        }
+        if (name != null) SetName(h.Entity, name);
         return h;
     }
 
@@ -126,39 +136,146 @@ public sealed partial class World
     // Mirrors flecs pipeline_build_dependency_graph.
     private void RebuildPipelineLocked()
     {
+        RebuildPhaseOrderLocked();
         _phaseWaves.Clear();
-        for (int p = 0; p < _phaseOrder.Length; p++)
-        {
-            var phase = _phaseOrder[p];
-            List<List<SystemHandle>>? waves = null;
-            for (int i = 0; i < _systems.Count; i++)
-            {
-                var s = _systems[i];
-                if (s.Phase != phase) continue;
-                waves ??= new List<List<SystemHandle>>();
-                if (!s.ParallelSafe)
-                {
-                    waves.Add(new List<SystemHandle> { s });
-                    continue;
-                }
-                bool placed = false;
-                for (int w = 0; w < waves.Count; w++)
-                {
-                    var wave = waves[w];
-                    bool conflict = false;
-                    for (int j = 0; j < wave.Count; j++)
-                    {
-                        var other = wave[j];
-                        if (!other.ParallelSafe || s.ConflictsWith(other))
-                        { conflict = true; break; }
-                    }
-                    if (!conflict) { wave.Add(s); placed = true; break; }
-                }
-                if (!placed) waves.Add(new List<SystemHandle> { s });
-            }
-            if (waves != null) _phaseWaves[phase] = waves;
-        }
+        // Wave packing covers _phaseOrder phases + OnStart (which is excluded
+        // from per-frame iteration but still needs waves built so the first
+        // Progress can dispatch its systems).
+        BuildPhaseWavesLocked(OnStart);
+        for (int p = 0; p < _phaseOrder.Count; p++)
+            BuildPhaseWavesLocked(_phaseOrder[p]);
         _pipelineDirty = false;
+    }
+
+    private void BuildPhaseWavesLocked(EntityId phase)
+    {
+        List<List<SystemHandle>>? waves = null;
+        for (int i = 0; i < _systems.Count; i++)
+        {
+            var s = _systems[i];
+            if (s.Phase != phase) continue;
+            if (!SystemMatchesActivePipeline(s)) continue;
+            waves ??= new List<List<SystemHandle>>();
+            if (!s.ParallelSafe)
+            {
+                waves.Add(new List<SystemHandle> { s });
+                continue;
+            }
+            bool placed = false;
+            for (int w = 0; w < waves.Count; w++)
+            {
+                var wave = waves[w];
+                bool conflict = false;
+                for (int j = 0; j < wave.Count; j++)
+                {
+                    var other = wave[j];
+                    if (!other.ParallelSafe || s.ConflictsWith(other))
+                    { conflict = true; break; }
+                }
+                if (!conflict) { wave.Add(s); placed = true; break; }
+            }
+            if (!placed) waves.Add(new List<SystemHandle> { s });
+        }
+        if (waves != null) _phaseWaves[phase] = waves;
+    }
+
+    // Topological sort of all Phase-tagged entities by DependsOn. Output is
+    // assigned to _phaseOrder (excluding OnStart — that runs once on first
+    // Progress, see Progress()). Kahn's algorithm with deterministic tiebreak
+    // by entity id so test order is stable. Cycles are prevented by the
+    // Acyclic flag on DependsOn (Add throws on cycle), but if one slips in,
+    // remaining nodes are appended in id order so Progress still terminates.
+    private void RebuildPhaseOrderLocked()
+    {
+        _phaseOrder.Clear();
+        var phaseTag = (Id)Phase;
+        var depRel = DependsOn.Id;
+        // Collect all live phase entities. Multiple tables may hold the Phase
+        // tag (any combination of other components); scan tables once.
+        var phases = new List<EntityId>();
+        for (int ti = 1; ti < _tablesById.Count; ti++)
+        {
+            var t = _tablesById[ti];
+            if (t == null || t.Count == 0 || !t.Has(phaseTag)) continue;
+            for (int r = 0; r < t.Count; r++) phases.Add(t.Entities[r]);
+        }
+        if (phases.Count == 0) return;
+        phases.Sort((a, b) => a.Id.CompareTo(b.Id));
+        // Indegree = number of DependsOn predecessors that are themselves
+        // Phase-tagged. Pairs whose target isn't a phase are ignored.
+        var phaseSet = new HashSet<uint>();
+        foreach (var p in phases) phaseSet.Add(p.Id);
+        var indeg = new Dictionary<uint, int>(phases.Count);
+        var succ = new Dictionary<uint, List<uint>>(phases.Count);
+        foreach (var p in phases) { indeg[p.Id] = 0; succ[p.Id] = new List<uint>(); }
+        foreach (var p in phases)
+        {
+            ref var rec = ref GetSlot(p.Id);
+            var t = _tablesById[rec.TableId]!;
+            for (int i = 0; i < t.ComponentIds.Length; i++)
+            {
+                var cid = t.ComponentIds[i];
+                if (!cid.IsPair || cid.Relation != depRel) continue;
+                uint pred = cid.Target;
+                if (!phaseSet.Contains(pred)) continue;
+                succ[pred].Add(p.Id);
+                indeg[p.Id]++;
+            }
+        }
+        // Kahn's: ready queue = phases with indeg 0, sorted by id for determinism.
+        var ready = new List<uint>();
+        foreach (var p in phases) if (indeg[p.Id] == 0) ready.Add(p.Id);
+        ready.Sort();
+        while (ready.Count > 0)
+        {
+            uint pid = ready[0];
+            ready.RemoveAt(0);
+            // Skip OnStart — it dispatches once on first Progress, not every frame.
+            if (pid != OnStart.Id)
+            {
+                ref var rec = ref GetSlot(pid);
+                _phaseOrder.Add(new EntityId(pid, rec.Generation));
+            }
+            foreach (var s in succ[pid])
+            {
+                if (--indeg[s] == 0)
+                {
+                    int idx = ready.BinarySearch(s);
+                    if (idx < 0) idx = ~idx;
+                    ready.Insert(idx, s);
+                }
+            }
+        }
+        // Unreachable (cycle) nodes — append in id order to avoid silent loss.
+        foreach (var p in phases)
+        {
+            if (indeg[p.Id] > 0 && p.Id != OnStart.Id) _phaseOrder.Add(p);
+        }
+    }
+
+    // Create a user-defined phase entity. Tagged with Phase. By default depends
+    // on no other phase — caller chains via PhaseAfter or by adding
+    // (DependsOn, predecessor) directly. Phase ordering is rebuilt lazily.
+    public EntityId CreatePhase(string? name = null)
+    {
+        EntityId e;
+        lock (_lock)
+        {
+            e = CreateEntityCore();
+            EnsureHasIdLocked(e, (Id)Phase);
+            _pipelineDirty = true;
+        }
+        if (name != null) SetName(e, name);
+        return e;
+    }
+
+    // Sugar — make 'phase' run after 'predecessor'. Both must be phase entities;
+    // multiple PhaseAfter calls allowed (multi-edge predecessors). Acyclic
+    // enforcement via DependsOn's Acyclic trait throws on cycles.
+    public void PhaseAfter(EntityId phase, EntityId predecessor)
+    {
+        Add(phase, DependsOn, predecessor);
+        lock (_lock) _pipelineDirty = true;
     }
 
     // Inspect computed waves for the given phase. Rebuilds if dirty. Returns
@@ -189,7 +306,18 @@ public sealed partial class World
         _totalTime += deltaTime;
         _frameCount++;
         AdvanceTickSources(deltaTime);
-        for (int p = 0; p < _phaseOrder.Length; p++)
+        // OnStart phase — fire once on first Progress, before any normal phase
+        // dispatch. Subsequent Progress calls skip OnStart-phase systems.
+        if (!_onStartFired)
+        {
+            _onStartFired = true;
+            if (_phaseWaves.TryGetValue(OnStart, out var startWaves))
+            {
+                for (int w = 0; w < startWaves.Count; w++)
+                    RunWave(startWaves[w], deltaTime);
+            }
+        }
+        for (int p = 0; p < _phaseOrder.Count; p++)
         {
             var phase = _phaseOrder[p];
             if (!_phaseWaves.TryGetValue(phase, out var waves)) continue;
@@ -295,8 +423,26 @@ public sealed partial class World
             var s = wave[i];
             if (!s.Enabled) continue;
             if (!ShouldRunSystem(s)) continue;
-            s.Action(this, deltaTime);
+            var prev = _currentSystem;
+            _currentSystem = s;
+            try { s.Action(this, deltaTime); }
+            finally { _currentSystem = prev; }
         }
+    }
+
+    // ThreadStatic active system. Set during dispatch (sequential and parallel),
+    // cleared after. Body code reads via World.CurrentSystem / SystemCtx<T>().
+    [System.ThreadStatic] private static SystemHandle? _currentSystem;
+    public SystemHandle? CurrentSystem => _currentSystem;
+    // Typed-context accessor — equivalent to (T)CurrentSystem!.Ctx. Throws
+    // InvalidOperationException if no system active or ctx is null/wrong type.
+    public T SystemCtx<T>() where T : class
+    {
+        var s = _currentSystem;
+        if (s == null) ThrowHelper.NoCurrentSystem();
+        if (s.Ctx is T t) return t;
+        ThrowHelper.SystemCtxWrongType(typeof(T));
+        return null!;
     }
 
     // Tick-source gate. Returns true when system has no source (always run)
@@ -348,8 +494,9 @@ public sealed partial class World
                 if (!s.Enabled) return;
                 if (!ShouldRunSystem(s)) return;
                 Stage.SetCurrent(stage);
+                _currentSystem = s;
                 try { s.Action(this, deltaTime); }
-                finally { Stage.ClearCurrent(); }
+                finally { _currentSystem = null; Stage.ClearCurrent(); }
             });
         }
         Task.WaitAll(tasks);

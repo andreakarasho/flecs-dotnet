@@ -21,6 +21,10 @@ public sealed class SystemHandle
     public EntityId Phase { get; internal set; }
     public SystemAction Action { get; internal set; }
     public bool Enabled { get; set; } = true;
+    // Backing entity. Tagged with the reserved System id; user can add custom
+    // tags to opt the system in/out of pipeline filters. Pipeline matching
+    // checks (withIds present AND withoutIds absent) on this entity.
+    public EntityId Entity { get; internal set; }
     // R/W component-id sets used by the pipeline DAG. Default empty (treated
     // as "writes anything" — pessimistic, forces serialization). System<T...>
     // sugar populates WriteIds from typed args; user can swap via SetReads /
@@ -36,6 +40,10 @@ public sealed class SystemHandle
     // bound source's TickSource.Tick is true. Default 0 = run every Progress.
     // Sources are timers (world.Timer) or rate filters (world.Rate).
     public EntityId TickSource { get; set; }
+    // Optional user context. Stashed alongside the handle; readable inside
+    // the system body via World.CurrentSystem.Ctx or world.SystemCtx<T>().
+    // Mirrors flecs ecs_system_desc_t.ctx.
+    public object? Ctx { get; set; }
 
     internal SystemHandle(string name, EntityId phase, SystemAction action)
     { Name = name; Phase = phase; Action = action; }
@@ -43,6 +51,7 @@ public sealed class SystemHandle
     public SystemHandle SetReads(params Id[] ids) { ReadIds = ids; return this; }
     public SystemHandle SetWrites(params Id[] ids) { WriteIds = ids; return this; }
     public SystemHandle SetParallelSafe(bool v = true) { ParallelSafe = v; return this; }
+    public SystemHandle SetCtx(object? ctx) { Ctx = ctx; return this; }
 
     // Conflict: this writes to anything other reads or writes, or vice versa.
     internal bool ConflictsWith(SystemHandle other)
