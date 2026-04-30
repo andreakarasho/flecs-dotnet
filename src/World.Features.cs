@@ -185,6 +185,9 @@ public sealed partial class World
         {
             if (_pipelineDirty) RebuildPipelineLocked();
         }
+        _lastDeltaTime = deltaTime;
+        _totalTime += deltaTime;
+        _frameCount++;
         for (int p = 0; p < _phaseOrder.Length; p++)
         {
             var phase = _phaseOrder[p];

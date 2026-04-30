@@ -235,6 +235,43 @@ public sealed partial class World
     public int AliveCount => _aliveCount;
     public int TableCount => _tablesById.Count - 1;
     public int ComponentCount { get { lock (_lock) { return _componentInfo.Count; } } }
+
+    // Frame stats — bumped by Progress(). Read without locking.
+    internal long _frameCount;
+    internal double _totalTime;
+    internal float _lastDeltaTime;
+
+    // Snapshot of world counters + frame stats. Cheap O(table count) — walks
+    // tables for empty-count and tag-count tallies. Mirrors flecs ecs_get_world_info.
+    public WorldInfo GetInfo()
+    {
+        lock (_lock)
+        {
+            int empty = 0;
+            for (int i = 1; i < _tablesById.Count; i++)
+            {
+                var t = _tablesById[i];
+                if (t != null && t.Count == 0) empty++;
+            }
+            int tags = _typeToEntity.Count - _componentInfo.Count;
+            return new WorldInfo
+            {
+                AliveEntities = _aliveCount,
+                RecycledEntities = _recycled.Count,
+                TableCount = _tablesById.Count - 1,
+                EmptyTableCount = empty,
+                ComponentCount = _componentInfo.Count,
+                TagCount = tags < 0 ? 0 : tags,
+                SystemCount = _systems.Count,
+                CanToggleCount = _canToggleIds.Count,
+                SparseCount = _sparseIds.Count,
+                UnionCount = _unionRelIds.Count,
+                FrameCount = _frameCount,
+                LastDeltaTime = _lastDeltaTime,
+                TotalTime = _totalTime,
+            };
+        }
+    }
     public bool IsDeferred { get { lock (_lock) { return _deferDepth > 0; } } }
     public bool IsReadonly { get { lock (_lock) { return _readonlyDepth > 0; } } }
 
