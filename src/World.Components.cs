@@ -258,6 +258,19 @@ public sealed partial class World
         return _idHooks.TryGetValue(id, out var ih) ? ih : null;
     }
 
+    // Internal accessors so SparseStorage<T> can fire hooks without
+    // re-acquiring the world lock during entity teardown.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal IdHooks? GetIdHooksRaw(Id id) => GetIdHooks(id);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal object? GetTypeHooksRaw(Id compId)
+        => _componentInfo.TryGetValue(compId, out var info) ? info.Hooks : null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void DispatchMultiObsRaw(Event evt, EntityId entity, Id triggerId)
+        => DispatchMultiObsLocked(evt, entity, triggerId);
+
     // ===== Multi-term observers (filter-style) =====
 
     // Register an observer that fires when 'evt' hits T1 or T2 on an entity
@@ -554,17 +567,47 @@ public sealed partial class World
                 _commands.Add(SetCmd<T>.Rent(entity, value));
                 return;
             }
-            var compId = GetOrRegisterComponentLocked<T>();
-            EnsureHasIdLocked(entity, compId);
+            var compEnt = GetOrRegisterComponentLocked<T>();
+            var compId = (Id)compEnt;
+            // Sparse path — bypass archetype, route through SparseStorage<T>.
+            if (_sparseIds.Contains(compEnt.Id))
+            {
+                SetSparseLocked(entity, compId, value);
+                return;
+            }
+            EnsureHasIdLocked(entity, compEnt);
             ref var rec = ref GetSlot(entity.Id);
             var table = _tablesById[rec.TableId]!;
-            int colIdx = table.IndexOf((Id)compId);
+            int colIdx = table.IndexOf(compId);
             var col = (Column<T>)table.Columns[colIdx]!;
             col.Set(rec.Row, value);
             col.InvokeOnSet(this, entity, rec.Row);
-            GetIdHooks((Id)compId)?.OnSet?.Invoke(this, entity);
-            DispatchMultiObsLocked(Event.OnSet, entity, (Id)compId);
+            GetIdHooks(compId)?.OnSet?.Invoke(this, entity);
+            DispatchMultiObsLocked(Event.OnSet, entity, compId);
         }
+    }
+
+    // Sparse Set — value lives in SparseStorage<T>. Fires OnAdd+Ctor on first
+    // set, OnSet always. Mirrors archetype-Set hook ordering.
+    private void SetSparseLocked<T>(EntityId entity, Id compId, T value) where T : struct
+    {
+        var storage = (SparseStorage<T>)_sparseStorage[compId.Component];
+        var info = _componentInfo[compId];
+        var hooks = info.Hooks as TypeHooks<T>;
+        bool wasNew = !storage.Has(entity.Id);
+        if (wasNew)
+        {
+            T fresh = default;
+            hooks?.Ctor?.Invoke(this, entity, ref fresh);
+            storage.Set(entity.Id, fresh);
+            hooks?.OnAdd?.Invoke(this, entity, ref storage.GetRef(entity.Id));
+            GetIdHooks(compId)?.OnAdd?.Invoke(this, entity);
+            DispatchMultiObsLocked(Event.OnAdd, entity, compId);
+        }
+        storage.Set(entity.Id, value);
+        hooks?.OnSet?.Invoke(this, entity, ref storage.GetRef(entity.Id));
+        GetIdHooks(compId)?.OnSet?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnSet, entity, compId);
     }
 
     // Get<T>: returns ref to T on entity itself, or via IsA chain (shared ref
@@ -578,6 +621,13 @@ public sealed partial class World
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) ThrowHelper.ComponentNotRegistered(typeof(T));
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) ThrowHelper.IsTagNotComponent(typeof(T));
+        if (_sparseIds.Contains(compEnt.Id))
+        {
+            var s = (SparseStorage<T>)_sparseStorage[compEnt.Id];
+            ref var v = ref s.GetRef(entity.Id);
+            if (Unsafe.IsNullRef(ref v)) ThrowHelper.EntityMissingComponent(typeof(T));
+            return ref v;
+        }
         var table = _tablesById[rec.TableId]!;
         if (table.Has(compId))
             return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
@@ -596,6 +646,13 @@ public sealed partial class World
         { value = default; return false; }
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) { value = default; return false; }
+        if (_sparseIds.Contains(compEnt.Id))
+        {
+            var s = (SparseStorage<T>)_sparseStorage[compEnt.Id];
+            if (!s.Has(entity.Id)) { value = default; return false; }
+            value = s.GetRef(entity.Id);
+            return true;
+        }
         var table = _tablesById[rec.TableId]!;
         if (table.Has(compId))
         {
@@ -622,6 +679,8 @@ public sealed partial class World
             return ref Unsafe.NullRef<T>();
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) return ref Unsafe.NullRef<T>();
+        if (_sparseIds.Contains(compEnt.Id))
+            return ref ((SparseStorage<T>)_sparseStorage[compEnt.Id]).GetRef(entity.Id);
         var table = _tablesById[rec.TableId]!;
         if (table.Has(compId))
             return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
@@ -639,6 +698,8 @@ public sealed partial class World
     {
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
+        if (_sparseIds.Contains(compEnt.Id))
+            return ((SparseStorage<T>)_sparseStorage[compEnt.Id]).Has(entity.Id);
         ref var rec = ref GetSlot(entity.Id);
         var compId = (Id)compEnt;
         if (_tablesById[rec.TableId]!.Has(compId)) return true;
@@ -674,6 +735,8 @@ public sealed partial class World
     {
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
+        if (_sparseIds.Contains(compEnt.Id))
+            return ((SparseStorage<T>)_sparseStorage[compEnt.Id]).Has(entity.Id);
         ref var rec = ref GetSlot(entity.Id);
         return _tablesById[rec.TableId]!.Has((Id)compEnt);
     }
@@ -754,8 +817,27 @@ public sealed partial class World
         {
             if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return;
             if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, (Id)compEnt)); return; }
+            if (_sparseIds.Contains(compEnt.Id))
+            {
+                RemoveSparseLocked<T>(entity, (Id)compEnt);
+                return;
+            }
             RemoveIdLocked(entity, (Id)compEnt);
         }
+    }
+
+    // Sparse Remove — fires OnRemove + Dtor before clearing the dense slot.
+    private void RemoveSparseLocked<T>(EntityId entity, Id compId) where T : struct
+    {
+        var storage = (SparseStorage<T>)_sparseStorage[compId.Component];
+        if (!storage.Has(entity.Id)) return;
+        var hooks = _componentInfo[compId].Hooks as TypeHooks<T>;
+        ref var slot = ref storage.GetRef(entity.Id);
+        hooks?.OnRemove?.Invoke(this, entity, ref slot);
+        hooks?.Dtor?.Invoke(this, entity, ref slot);
+        GetIdHooks(compId)?.OnRemove?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnRemove, entity, compId);
+        storage.TryRemove(entity.Id, out _);
     }
 
     public void Remove<TR, TT>(EntityId entity) where TR : struct where TT : struct

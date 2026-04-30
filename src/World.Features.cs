@@ -737,6 +737,43 @@ public sealed partial class World
     internal bool IsCanToggleId(Id id)
         => _canToggleIds.Contains(id.IsPair ? id.Relation : id.Component);
 
+    // ========== Sparse trait ==========
+    //
+    // MarkSparse<T>: opt T into non-fragmenting sparse storage. Set/Get/Has/
+    // Owns/Remove route through SparseStorage<T> instead of archetype columns.
+    // Iteration over sparse-only queries is NYI — Query<SparseT> matches
+    // nothing today. Mixed queries can use world.Get<T>(e) inside foreach.
+    //
+    // Restrictions:
+    //   • Must be a value component (Component<T> registered or auto-reg).
+    //     Tags can't be sparse — sparse semantics require dense storage.
+    //   • Should be marked early. Existing archetype data is NOT migrated;
+    //     entities that already own T via archetype keep that copy until
+    //     Remove<T>. New Set<T> writes go to the sparse path.
+    public void MarkSparse<T>() where T : struct
+    {
+        lock (_lock)
+        {
+            var ent = GetOrRegisterComponentLocked<T>();
+            var compId = (Id)ent;
+            if (!_componentInfo.TryGetValue(compId, out _))
+                ThrowHelper.IsTagNotComponent(typeof(T));
+            if (_sparseIds.Add(ent.Id))
+                _sparseStorage[ent.Id] = new SparseStorage<T>(compId);
+        }
+    }
+
+    public bool IsSparse<T>() where T : struct
+    {
+        if (!_typeToEntity.TryGetValue(typeof(T), out var ent)) return false;
+        return _sparseIds.Contains(ent.Id);
+    }
+    public bool IsSparse(EntityId id) => _sparseIds.Contains(id.Id);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsSparseId(Id id)
+        => !id.IsPair && _sparseIds.Contains(id.Component);
+
     // True if the id (component or pair) blocks IsA propagation. For pairs,
     // checks the relation entity.
     private bool IsIdDontInherit(Id id)

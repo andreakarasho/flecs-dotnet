@@ -166,6 +166,12 @@ public sealed partial class World
     // Component ids opted into non-fragmenting toggle. Tables containing these
     // ids allocate parallel Bitset columns. Mirrors flecs CanToggle trait.
     internal readonly HashSet<uint> _canToggleIds = new();
+    // Sparse component ids — value lives in side-table SparseStorage<T>, not in
+    // archetype columns. Set/Get/Has/Owns/Remove route through the storage.
+    // Mirrors flecs Sparse trait. Iteration support deferred — Query<SparseT>
+    // currently does not match sparse-only terms (NYI).
+    internal readonly HashSet<uint> _sparseIds = new();
+    internal readonly Dictionary<uint, ISparseStorage> _sparseStorage = new();
 
     public World()
     {
@@ -341,6 +347,13 @@ public sealed partial class World
     private void DeleteSingleLocked(EntityId entity)
     {
         ref var rec = ref GetSlot(entity.Id);
+        // Sparse cleanup — fire OnRemove/Dtor + drop entries in any
+        // SparseStorage<T> that holds this entity.
+        if (_sparseStorage.Count > 0)
+        {
+            foreach (var kv in _sparseStorage)
+                kv.Value.OnEntityDelete(this, entity);
+        }
         var table = _tablesById[rec.TableId]!;
         for (int i = 0; i < table.Columns.Length; i++)
         {
