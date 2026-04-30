@@ -1,80 +1,44 @@
 using Xunit;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Flecs.Tests;
 
+// Optional<T> via Query.Optional<T>() — RowEnumerator yields NullRef<T> when
+// a row's table lacks the optional column. Caller checks Unsafe.IsNullRef.
 public class IterOptionalTests
 {
     [Fact]
-    public void Iter_OptionalField_PresentSpan()
+    public void Optional_Present_YieldsValue()
     {
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Velocity(7, 8));
         Velocity captured = default;
-        w.Query<Position>().Run((in Iter<Position> it) =>
+        foreach (var (_, v) in w.Query<Position, Velocity>().Optional<Velocity>())
         {
-            var v = it.OptionalField<Velocity>();
-            if (v.Length > 0) captured = v[0];
-        });
+            if (!Unsafe.IsNullRef(ref v.Value)) captured = v.Value;
+        }
         Assert.Equal(7, captured.Dx);
         Assert.Equal(8, captured.Dy);
     }
 
     [Fact]
-    public void Iter_OptionalField_AbsentEmpty()
+    public void Optional_Absent_YieldsNullRef()
     {
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        // no Velocity
-        int len = -1;
-        w.Query<Position>().Run((in Iter<Position> it) =>
+        bool sawNull = false;
+        foreach (var (_, v) in w.Query<Position, Velocity>().Optional<Velocity>())
         {
-            len = it.OptionalField<Velocity>().Length;
-        });
-        Assert.Equal(0, len);
+            if (Unsafe.IsNullRef(ref v.Value)) sawNull = true;
+        }
+        Assert.True(sawNull);
     }
 
     [Fact]
-    public void Iter_HasOptional_Reflects()
-    {
-        var w = new World();
-        var a = w.CreateEntity();
-        var b = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
-        w.Set(a, new Velocity(0, 0));
-        w.Set(b, new Position(0, 0));
-
-        var byTable = new List<bool>();
-        w.Query<Position>().Run((in Iter<Position> it) => byTable.Add(it.HasOptional<Velocity>()));
-        Assert.Contains(true, byTable);
-        Assert.Contains(false, byTable);
-    }
-
-    [Fact]
-    public void Iter_OptionalField_MutationPersists()
-    {
-        var w = new World();
-        var e = w.CreateEntity();
-        w.Set(e, new Position(0, 0));
-        w.Set(e, new Velocity(2, 3));
-        w.Query<Position>().Run((in Iter<Position> it) =>
-        {
-            var v = it.OptionalField<Velocity>();
-            for (int r = 0; r < v.Length; r++)
-            {
-                v[r].Dx *= 10f;
-                v[r].Dy *= 10f;
-            }
-        });
-        Assert.Equal(20f, w.Get<Velocity>(e).Dx);
-        Assert.Equal(30f, w.Get<Velocity>(e).Dy);
-    }
-
-    [Fact]
-    public void Iter_OptionalField_TwoArchetypes_OneHasOneNot()
+    public void Optional_TwoArchetypes_OneHasOneNot()
     {
         var w = new World();
         for (int i = 0; i < 3; i++)
@@ -85,30 +49,31 @@ public class IterOptionalTests
         }
         int withV = 0;
         int total = 0;
-        w.Query<Position>().Run((in Iter<Position> it) =>
+        foreach (var (_, v) in w.Query<Position, Velocity>().Optional<Velocity>())
         {
-            var v = it.OptionalField<Velocity>();
-            total += it.Count;
-            if (v.Length > 0) withV += it.Count;
-        });
+            total++;
+            if (!Unsafe.IsNullRef(ref v.Value)) withV++;
+        }
         Assert.Equal(3, total);
-        Assert.Equal(2, withV); // i=0,2
+        Assert.Equal(2, withV);
     }
 
     [Fact]
-    public void Iter_OptionalField_HigherArity()
+    public void Optional_MutationPersists()
     {
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        w.Set(e, new Velocity(0, 0));
-        w.Set(e, new Health(99));
-        int captured = 0;
-        w.Query<Position, Velocity>().Run((in Iter<Position, Velocity> it) =>
+        w.Set(e, new Velocity(2, 3));
+        foreach (var (_, v) in w.Query<Position, Velocity>().Optional<Velocity>())
         {
-            var h = it.OptionalField<Health>();
-            if (h.Length > 0) captured = h[0].Value;
-        });
-        Assert.Equal(99, captured);
+            if (!Unsafe.IsNullRef(ref v.Value))
+            {
+                v.Value.Dx *= 10f;
+                v.Value.Dy *= 10f;
+            }
+        }
+        Assert.Equal(20f, w.Get<Velocity>(e).Dx);
+        Assert.Equal(30f, w.Get<Velocity>(e).Dy);
     }
 }

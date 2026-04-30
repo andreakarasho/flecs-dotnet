@@ -16,28 +16,13 @@ public class ReadonlyModeTests
     }
 
     [Fact]
-    public void IsReadonly_TrueDuringEach()
-    {
-        var w = new World();
-        var e = w.CreateEntity();
-        w.Set(e, new Position(1, 2));
-        bool seenReadonly = false;
-        w.Query<Position>().Each((EntityId _, ref Position _p) =>
-        {
-            if (w.IsReadonly) seenReadonly = true;
-        });
-        Assert.True(seenReadonly);
-        Assert.False(w.IsReadonly);
-    }
-
-    [Fact]
     public void IsReadonly_TrueDuringRows()
     {
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(1, 2));
         bool seen = false;
-        foreach (var p in w.Query<Position>().Rows())
+        foreach (var _ in w.Query<Position>())
         {
             if (w.IsReadonly) seen = true;
         }
@@ -46,20 +31,19 @@ public class ReadonlyModeTests
     }
 
     [Fact]
-    public void Mutation_DuringEach_QueuesAndFlushesAfter()
+    public void Mutation_DuringIter_QueuesAndFlushesAfter()
     {
         var w = new World();
         var a = w.CreateEntity(); w.Set(a, new Position(1, 0));
         var b = w.CreateEntity(); w.Set(b, new Position(2, 0));
-        // Adding Velocity inside Each must not invalidate iteration. Effects
-        // visible only after scope ends.
         int seen = 0;
-        w.Query<Position>().Each((EntityId e, ref Position _p) =>
+        foreach (var row in w.Query<Position>())
         {
             seen++;
+            var e = row.Entity;
             w.Set(e, new Velocity(1, 1));
-            Assert.False(w.Owns<Velocity>(e)); // not yet applied — queued
-        });
+            Assert.False(w.Owns<Velocity>(e)); // queued
+        }
         Assert.Equal(2, seen);
         Assert.True(w.Owns<Velocity>(a));
         Assert.True(w.Owns<Velocity>(b));
@@ -70,18 +54,17 @@ public class ReadonlyModeTests
     {
         var w = new World();
         var a = w.CreateEntity(); w.Set(a, new Position(1, 0));
-        bool addedSeenInside = true;
-        w.Query<Position>().Each((EntityId e, ref Position _p) =>
+        bool sawAddedInside = false;
+        foreach (var row in w.Query<Position>())
         {
+            var e = row.Entity;
             using (w.Defer())
             {
                 w.Set(e, new Velocity(2, 2));
-            } // EndDefer must NOT flush — outer readonly still holds queue.
-            // Velocity still queued.
-            if (w.Owns<Velocity>(e)) addedSeenInside = true;
-            else addedSeenInside = false;
-        });
-        Assert.False(addedSeenInside);
+            }
+            sawAddedInside = w.Owns<Velocity>(e);
+        }
+        Assert.False(sawAddedInside);
         Assert.True(w.Owns<Velocity>(a));
     }
 
@@ -94,10 +77,8 @@ public class ReadonlyModeTests
         w.StrictReadonly = true;
         Assert.Throws<InvalidOperationException>(() =>
         {
-            w.Query<Position>().Each((EntityId ent, ref Position _p) =>
-            {
-                w.Set(ent, new Velocity(1, 1)); // would normally queue; strict throws
-            });
+            foreach (var row in w.Query<Position>())
+                w.Set(row.Entity, new Velocity(1, 1));
         });
     }
 
@@ -108,14 +89,11 @@ public class ReadonlyModeTests
         var e = w.CreateEntity();
         w.Set(e, new Position(1, 2));
         w.StrictReadonly = true;
-        // Explicit Defer satisfies the queueing intent.
-        w.Query<Position>().Each((EntityId ent, ref Position _p) =>
+        foreach (var row in w.Query<Position>())
         {
             using (w.Defer())
-            {
-                w.Set(ent, new Velocity(1, 1));
-            }
-        });
+                w.Set(row.Entity, new Velocity(1, 1));
+        }
         Assert.True(w.Owns<Velocity>(e));
     }
 

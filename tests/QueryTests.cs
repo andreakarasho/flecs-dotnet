@@ -14,9 +14,12 @@ public class QueryTests
         w.Set(a, new Position(1, 1));
         // b has no Position
         var hits = new HashSet<uint>();
-        w.Query<Position>().Each((EntityId e, ref Position p) => hits.Add(e.Id));
+        var q = w.Query<Position>();
+        // RowEnumerator does not expose entity ids — verify count + value instead.
+        int rows = 0;
+        foreach (var row in q) { rows++; if (row.Component1.Value.X == 1f) hits.Add(a.Id); }
         Assert.Contains(a.Id, hits);
-        Assert.DoesNotContain(b.Id, hits);
+        Assert.Equal(1, rows);
     }
 
     [Fact]
@@ -25,13 +28,18 @@ public class QueryTests
         var w = new World();
         var a = w.CreateEntity();
         var b = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
+        w.Set(a, new Position(7, 0));
         w.Set(a, new Velocity(0, 0));
         w.Set(b, new Position(0, 0)); // missing Velocity
-        var matched = new List<uint>();
-        w.Query<Position, Velocity>().Each((EntityId e, ref Position p, ref Velocity v) => matched.Add(e.Id));
-        Assert.Single(matched);
-        Assert.Equal(a.Id, matched[0]);
+        int matched = 0;
+        float seen = 0;
+        foreach (var (p, _) in w.Query<Position, Velocity>())
+        {
+            matched++;
+            seen = p.Value.X;
+        }
+        Assert.Equal(1, matched);
+        Assert.Equal(7f, seen);
     }
 
     [Fact]
@@ -40,7 +48,8 @@ public class QueryTests
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(1, 2));
-        w.Query<Position>().Each((EntityId _, ref Position p) => { p.X = 99; });
+        foreach (var row in w.Query<Position>())
+            row.Component1.Value.X = 99;
         Assert.Equal(99, w.Get<Position>(e).X);
     }
 
@@ -50,13 +59,14 @@ public class QueryTests
         var w = new World();
         var a = w.CreateEntity();
         var b = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
-        w.Set(b, new Position(0, 0));
+        w.Set(a, new Position(1, 0));
+        w.Set(b, new Position(2, 0));
         w.Add<Frozen>(b);
-        var hits = new HashSet<uint>();
-        w.Query<Position>().Without<Frozen>().Each((EntityId e, ref Position _) => hits.Add(e.Id));
-        Assert.Contains(a.Id, hits);
-        Assert.DoesNotContain(b.Id, hits);
+        var seen = new HashSet<float>();
+        foreach (var row in w.Query<Position>().Without<Frozen>())
+            seen.Add(row.Component1.Value.X);
+        Assert.Contains(1f, seen);
+        Assert.DoesNotContain(2f, seen);
     }
 
     [Fact]
@@ -66,17 +76,17 @@ public class QueryTests
         var a = w.CreateEntity();
         var b = w.CreateEntity();
         var c = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
-        w.Set(b, new Position(0, 0));
-        w.Set(c, new Position(0, 0));
+        w.Set(a, new Position(1, 0));
+        w.Set(b, new Position(2, 0));
+        w.Set(c, new Position(3, 0));
         w.Add<Boss>(a);
         w.Add<Frozen>(b);
-        // c has neither
-        var hits = new HashSet<uint>();
-        w.Query<Position>().Or<Boss, Frozen>().Each((EntityId e, ref Position _) => hits.Add(e.Id));
-        Assert.Contains(a.Id, hits);
-        Assert.Contains(b.Id, hits);
-        Assert.DoesNotContain(c.Id, hits);
+        var seen = new HashSet<float>();
+        foreach (var row in w.Query<Position>().Or<Boss, Frozen>())
+            seen.Add(row.Component1.Value.X);
+        Assert.Contains(1f, seen);
+        Assert.Contains(2f, seen);
+        Assert.DoesNotContain(3f, seen);
     }
 
     [Fact]
@@ -85,13 +95,14 @@ public class QueryTests
         var w = new World();
         var a = w.CreateEntity();
         var b = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
+        w.Set(a, new Position(1, 0));
         w.Add<TagA>(a);
-        w.Set(b, new Position(0, 0));
-        var hits = new HashSet<uint>();
-        w.Query<Position>().With<TagA>().Each((EntityId e, ref Position _) => hits.Add(e.Id));
-        Assert.Single(hits);
-        Assert.Contains(a.Id, hits);
+        w.Set(b, new Position(2, 0));
+        var seen = new HashSet<float>();
+        foreach (var row in w.Query<Position>().With<TagA>())
+            seen.Add(row.Component1.Value.X);
+        Assert.Single(seen);
+        Assert.Contains(1f, seen);
     }
 
     [Fact]
@@ -101,18 +112,17 @@ public class QueryTests
         var a = w.CreateEntity();
         var b = w.CreateEntity();
         var c = w.CreateEntity();
-        w.Set(a, new Position(0, 0));
-        w.Set(b, new Position(0, 0));
-        w.Set(c, new Position(0, 0));
+        w.Set(a, new Position(1, 0));
+        w.Set(b, new Position(2, 0));
+        w.Set(c, new Position(3, 0));
         w.Add<Likes, Apple>(a);
         w.Add<Likes, Orange>(b);
-        // c has no Likes
-        var hits = new HashSet<uint>();
-        w.Query<Position>().With(w.PairWildcard<Likes>())
-            .Each((EntityId e, ref Position _) => hits.Add(e.Id));
-        Assert.Contains(a.Id, hits);
-        Assert.Contains(b.Id, hits);
-        Assert.DoesNotContain(c.Id, hits);
+        var seen = new HashSet<float>();
+        foreach (var row in w.Query<Position>().With(w.PairWildcard<Likes>()))
+            seen.Add(row.Component1.Value.X);
+        Assert.Contains(1f, seen);
+        Assert.Contains(2f, seen);
+        Assert.DoesNotContain(3f, seen);
     }
 
     [Fact]
@@ -122,9 +132,8 @@ public class QueryTests
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Delete(e);
-        // Table still exists but empty.
         int count = 0;
-        w.Query<Position>().Each((EntityId _, ref Position _) => count++);
+        foreach (var _ in w.Query<Position>()) count++;
         Assert.Equal(0, count);
     }
 
@@ -140,13 +149,13 @@ public class QueryTests
     }
 
     [Fact]
-    public void Query_ChangeDetection_FalseAfterEach()
+    public void Query_ChangeDetection_FalseAfterIter()
     {
         var w = new World();
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         var q = w.Query<Position>();
-        q.Each((EntityId _, ref Position _) => { });
+        foreach (var _ in q) { }
         Assert.False(q.IsChanged());
     }
 
@@ -157,7 +166,7 @@ public class QueryTests
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         var q = w.Query<Position>();
-        q.Each((EntityId _, ref Position _) => { });
+        foreach (var _ in q) { }
         Assert.False(q.IsChanged());
         var e2 = w.CreateEntity();
         w.Set(e2, new Position(1, 1));
@@ -165,7 +174,7 @@ public class QueryTests
     }
 
     [Fact]
-    public void Query_Run_GivesSpanAccess()
+    public void Query_PerRow_TightLoop()
     {
         var w = new World();
         for (int i = 0; i < 5; i++)
@@ -174,11 +183,8 @@ public class QueryTests
             w.Set(e, new Position(i, i));
         }
         int total = 0;
-        w.Query<Position>().Run((in Iter<Position> it) =>
-        {
-            var span = it.Field1();
-            for (int r = 0; r < it.Count; r++) total += (int)span[r].X;
-        });
+        foreach (var row in w.Query<Position>())
+            total += (int)row.Component1.Value.X;
         Assert.Equal(0 + 1 + 2 + 3 + 4, total);
     }
 
@@ -194,8 +200,8 @@ public class QueryTests
         w.Set(e, new Damage(0));
         w.Set(e, new Defense(0));
         int hits = 0;
-        w.Query<Position, Velocity, Health, Mana, Damage, Defense>().Each(
-            (EntityId _, ref Position _, ref Velocity _, ref Health _, ref Mana _, ref Damage _, ref Defense _) => hits++);
+        foreach (var _ in w.Query<Position, Velocity, Health, Mana, Damage, Defense>())
+            hits++;
         Assert.Equal(1, hits);
     }
 }

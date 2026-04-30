@@ -16,11 +16,9 @@ public class QueryOptionalBuilderTests
         w.Set(a, new Position(0, 0));
         w.Set(a, new Velocity(1, 1));
         w.Set(b, new Position(0, 0));
-        // b has no Velocity
         var seen = new HashSet<uint>();
-        w.Query<Position, Velocity>()
-            .Optional<Velocity>()
-            .Each((EntityId e, ref Position _, ref Velocity _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position, Velocity>().Optional<Velocity>())
+            seen.Add(row.Entity.Id);
         Assert.Equal(2, seen.Count);
         Assert.Contains(a.Id, seen);
         Assert.Contains(b.Id, seen);
@@ -36,10 +34,8 @@ public class QueryOptionalBuilderTests
         w.Set(a, new Velocity(7, 8));
         w.Set(b, new Position(0, 0));
         var nullByEnt = new Dictionary<uint, bool>();
-        w.Query<Position, Velocity>()
-            .Optional<Velocity>()
-            .Each((EntityId e, ref Position _, ref Velocity v) =>
-                nullByEnt[e.Id] = Unsafe.IsNullRef(ref v));
+        foreach (var row in w.Query<Position, Velocity>().Optional<Velocity>())
+            nullByEnt[row.Entity.Id] = Unsafe.IsNullRef(ref row.Component2.Value);
         Assert.False(nullByEnt[a.Id]);
         Assert.True(nullByEnt[b.Id]);
     }
@@ -51,14 +47,12 @@ public class QueryOptionalBuilderTests
         var a = w.CreateEntity();
         w.Set(a, new Position(0, 0));
         w.Set(a, new Velocity(2, 3));
-        w.Query<Position, Velocity>()
-            .Optional<Velocity>()
-            .Each((EntityId _, ref Position p, ref Velocity v) =>
-            {
-                if (Unsafe.IsNullRef(ref v)) return;
-                v.Dx *= 10f;
-                p.X = 99;
-            });
+        foreach (var (p, v) in w.Query<Position, Velocity>().Optional<Velocity>())
+        {
+            if (Unsafe.IsNullRef(ref v.Value)) continue;
+            v.Value.Dx *= 10f;
+            p.Value.X = 99;
+        }
         Assert.Equal(99, w.Get<Position>(a).X);
         Assert.Equal(20f, w.Get<Velocity>(a).Dx);
     }
@@ -72,11 +66,9 @@ public class QueryOptionalBuilderTests
         w.Set(a, new Position(0, 0));
         w.Set(a, new Velocity(0, 0));
         w.Set(b, new Velocity(0, 0));
-        // b has no Position
         var seen = new HashSet<uint>();
-        w.Query<Position, Velocity>()
-            .Optional<Position>()
-            .Each((EntityId e, ref Position _, ref Velocity _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position, Velocity>().Optional<Position>())
+            seen.Add(row.Entity.Id);
         Assert.Equal(2, seen.Count);
         Assert.Contains(a.Id, seen);
         Assert.Contains(b.Id, seen);
@@ -89,11 +81,9 @@ public class QueryOptionalBuilderTests
         var a = w.CreateEntity();
         var b = w.CreateEntity();
         w.Set(a, new Position(0, 0));
-        // b has no Position — but it's optional
         var seen = new HashSet<uint>();
-        w.Query<Position>()
-            .Optional<Position>()
-            .Each((EntityId e, ref Position _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position>().Optional<Position>())
+            seen.Add(row.Entity.Id);
         Assert.Contains(a.Id, seen);
         Assert.Contains(b.Id, seen);
     }
@@ -117,14 +107,12 @@ public class QueryOptionalBuilderTests
         w.Set(a, new Health(99));
         w.Set(b, new Position(0, 0));
         w.Set(b, new Velocity(0, 0));
-        // b has no Health
         var ints = new Dictionary<uint, int?>();
-        w.Query<Position, Velocity, Health>()
-            .Optional<Health>()
-            .Each((EntityId e, ref Position _, ref Velocity _, ref Health h) =>
-            {
-                ints[e.Id] = Unsafe.IsNullRef(ref h) ? (int?)null : h.Value;
-            });
+        foreach (var row in w.Query<Position, Velocity, Health>().Optional<Health>())
+        {
+            ref var h = ref row.Component3.Value;
+            ints[row.Entity.Id] = Unsafe.IsNullRef(ref h) ? (int?)null : h.Value;
+        }
         Assert.Equal(99, ints[a.Id]);
         Assert.Null(ints[b.Id]);
     }
@@ -137,10 +125,8 @@ public class QueryOptionalBuilderTests
         w.Set(a, new Position(0, 0));
         w.Set(a, new Velocity(1, 2));
         bool sawNonNull = false;
-        w.Query<Position, Velocity>()
-            .Optional<Velocity>()
-            .Each((EntityId _, ref Position _, ref Velocity v) =>
-                sawNonNull = !Unsafe.IsNullRef(ref v));
+        foreach (var row in w.Query<Position, Velocity>().Optional<Velocity>())
+            sawNonNull = !Unsafe.IsNullRef(ref row.Component2.Value);
         Assert.True(sawNonNull);
     }
 
@@ -155,10 +141,8 @@ public class QueryOptionalBuilderTests
         w.Set(b, new Velocity(0, 0));
         w.Add<Boss>(a);
         var seen = new HashSet<uint>();
-        w.Query<Position, Velocity>()
-            .Optional<Velocity>()
-            .Without<Boss>()
-            .Each((EntityId e, ref Position _, ref Velocity _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position, Velocity>().Optional<Velocity>().Without<Boss>())
+            seen.Add(row.Entity.Id);
         Assert.Single(seen);
         Assert.Contains(b.Id, seen);
     }

@@ -70,12 +70,13 @@ public class SystemTests
             w.Set(e, new Position(i, 0));
             w.Set(e, new Velocity(1, 0));
         }
-        w.System<Position, Velocity>("integrate", w.OnUpdate,
-            (EntityId e, ref Position p, ref Velocity v) => { p.X += v.Dx; });
+        w.System<Position, Velocity>("integrate", w.OnUpdate, q =>
+        {
+            foreach (var (p, v) in q) p.Value.X += v.Value.Dx;
+        });
         w.Progress(0);
-        // All Positions advanced by Velocity.Dx (=1).
         var sum = 0;
-        w.Query<Position>().Each((EntityId _, ref Position p) => sum += (int)p.X);
-        Assert.Equal(0 + 1 + 2 + 3, sum); // initial 0+1+2 plus +1 each = 1+2+3
+        foreach (var row in w.Query<Position>()) sum += (int)row.Component1.Value.X;
+        Assert.Equal(0 + 1 + 2 + 3, sum);
     }
 }

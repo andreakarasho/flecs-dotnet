@@ -5,7 +5,7 @@ namespace Flecs.Tests;
 public class HigherArityRunTests
 {
     [Fact]
-    public void Run_Arity4_SpanAccess()
+    public void Arity4_Iteration()
     {
         var w = new World();
         for (int i = 0; i < 3; i++)
@@ -17,21 +17,14 @@ public class HigherArityRunTests
             w.Set(e, new Mana(i));
         }
         int total = 0;
-        w.Query<Position, Velocity, Health, Mana>().Run((in Iter<Position, Velocity, Health, Mana> it) =>
-        {
-            var p = it.Field1();
-            var v = it.Field2();
-            var h = it.Field3();
-            var m = it.Field4();
-            for (int r = 0; r < it.Count; r++)
-                total += (int)(p[r].X + v[r].Dy + h[r].Value + m[r].Value);
-        });
+        foreach (var (p, v, h, m) in w.Query<Position, Velocity, Health, Mana>())
+            total += (int)(p.Value.X + v.Value.Dy + h.Value.Value + m.Value.Value);
         // (0+0+0+0) + (1+1+1+1) + (2+2+2+2) = 12
         Assert.Equal(12, total);
     }
 
     [Fact]
-    public void Run_Arity5_SpanAccess()
+    public void Arity5_Iteration()
     {
         var w = new World();
         var e = w.CreateEntity();
@@ -41,21 +34,13 @@ public class HigherArityRunTests
         w.Set(e, new Mana(3));
         w.Set(e, new Damage(4));
         int sum = 0;
-        w.Query<Position, Velocity, Health, Mana, Damage>().Run(
-            (in Iter<Position, Velocity, Health, Mana, Damage> it) =>
-            {
-                var p = it.Field1();
-                var h = it.Field3();
-                var m = it.Field4();
-                var d = it.Field5();
-                for (int r = 0; r < it.Count; r++)
-                    sum += (int)p[r].X + h[r].Value + m[r].Value + d[r].Value;
-            });
+        foreach (var (p, _, h, m, d) in w.Query<Position, Velocity, Health, Mana, Damage>())
+            sum += (int)p.Value.X + h.Value.Value + m.Value.Value + d.Value.Value;
         Assert.Equal(1 + 2 + 3 + 4, sum);
     }
 
     [Fact]
-    public void Run_Arity6_SpanAccess()
+    public void Arity6_Iteration()
     {
         var w = new World();
         var e = w.CreateEntity();
@@ -66,21 +51,13 @@ public class HigherArityRunTests
         w.Set(e, new Damage(30));
         w.Set(e, new Defense(40));
         int sum = 0;
-        w.Query<Position, Velocity, Health, Mana, Damage, Defense>().Run(
-            (in Iter<Position, Velocity, Health, Mana, Damage, Defense> it) =>
-            {
-                var h = it.Field3();
-                var m = it.Field4();
-                var d = it.Field5();
-                var df = it.Field6();
-                for (int r = 0; r < it.Count; r++)
-                    sum += h[r].Value + m[r].Value + d[r].Value + df[r].Value;
-            });
+        foreach (var (_, _, h, m, d, df) in w.Query<Position, Velocity, Health, Mana, Damage, Defense>())
+            sum += h.Value.Value + m.Value.Value + d.Value.Value + df.Value.Value;
         Assert.Equal(10 + 20 + 30 + 40, sum);
     }
 
     [Fact]
-    public void Run_Arity4_MutationViaSpan()
+    public void Arity4_MutationViaPtr()
     {
         var w = new World();
         var e = w.CreateEntity();
@@ -88,36 +65,12 @@ public class HigherArityRunTests
         w.Set(e, new Velocity(2, 2));
         w.Set(e, new Health(0));
         w.Set(e, new Mana(0));
-        w.Query<Position, Velocity, Health, Mana>().Run(
-            (in Iter<Position, Velocity, Health, Mana> it) =>
-            {
-                var p = it.Field1();
-                var v = it.Field2();
-                for (int r = 0; r < it.Count; r++)
-                {
-                    p[r].X += v[r].Dx;
-                    p[r].Y += v[r].Dy;
-                }
-            });
+        foreach (var (p, v, _, _) in w.Query<Position, Velocity, Health, Mana>())
+        {
+            p.Value.X += v.Value.Dx;
+            p.Value.Y += v.Value.Dy;
+        }
         Assert.Equal(3, w.Get<Position>(e).X);
         Assert.Equal(3, w.Get<Position>(e).Y);
-    }
-
-    [Fact]
-    public void Run_HigherArity_EntityAccess()
-    {
-        var w = new World();
-        var e = w.CreateEntity();
-        w.Set(e, new Position(0, 0));
-        w.Set(e, new Velocity(0, 0));
-        w.Set(e, new Health(0));
-        w.Set(e, new Mana(0));
-        EntityId seen = default;
-        w.Query<Position, Velocity, Health, Mana>().Run(
-            (in Iter<Position, Velocity, Health, Mana> it) =>
-            {
-                seen = it.Entity(0);
-            });
-        Assert.Equal(e.Id, seen.Id);
     }
 }

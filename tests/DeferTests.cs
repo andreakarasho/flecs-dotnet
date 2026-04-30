@@ -102,13 +102,13 @@ public class DeferTests
             var e = w.CreateEntity();
             w.Set(e, new Position(i, i));
         }
-        // Each wraps body in defer — mutating Adds queue safely.
-        w.Query<Position>().Each((EntityId e, ref Position _) => w.Add<TagA>(e));
+        // Iter wraps body in readonly — mutating Adds queue safely.
+        foreach (var row in w.Query<Position>()) w.Add<TagA>(row.Entity);
         int tagged = 0;
-        w.Query<Position>().Each((EntityId e, ref Position _) =>
+        foreach (var row in w.Query<Position>())
         {
-            if (w.Has<TagA>(e)) tagged++;
-        });
+            if (w.Has<TagA>(row.Entity)) tagged++;
+        }
         Assert.Equal(3, tagged);
     }
 

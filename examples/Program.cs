@@ -15,9 +15,54 @@ class Program
     }
 
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static void CreateEntities(World w, int n)
+    {
+        for (int i = 0; i < n; i++) w.CreateEntity();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static void SetPosVel(World w, int n)
+    {
+        for (int i = 0; i < n; i++)
+        {
+            var e = w.CreateEntity();
+            w.Set(e, new Position(1f, 1f));
+            w.Set(e, new Velocity(1.0000001f, 1.0000001f));
+        }
+    }
+
     static void Main()
     {
         const int N = 1_000_000;
+
+        // Warmup JIT.
+        var ww = new World();
+        CreateEntities(ww, 1000);
+        SetPosVel(ww, 1000);
+
+        // Bench CreateEntity alone.
+        for (int run = 0; run < 3; run++)
+        {
+            var wc = new World();
+            var sw = Stopwatch.StartNew();
+            CreateEntities(wc, N);
+            sw.Stop();
+            double ns = sw.Elapsed.TotalNanoseconds / N;
+            Console.WriteLine($"CreateEntity x {N:N0}: {sw.Elapsed.TotalMilliseconds,8:F2} ms ({ns:F1} ns/entity)");
+        }
+
+        // Bench Create+Set+Set.
+        for (int run = 0; run < 3; run++)
+        {
+            var ws = new World();
+            var sw = Stopwatch.StartNew();
+            SetPosVel(ws, N);
+            sw.Stop();
+            double ns = sw.Elapsed.TotalNanoseconds / N;
+            Console.WriteLine($"Create+Set+Set x {N:N0}: {sw.Elapsed.TotalMilliseconds,8:F2} ms ({ns:F1} ns/entity)");
+        }
+        Console.WriteLine();
 
         // ===== Own-only scenario =====
         var w = new World();

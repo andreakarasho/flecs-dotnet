@@ -56,10 +56,11 @@ public class TryGetComponentTests
         w.Set(b, new Position(0, 0));
         // b lacks Velocity
         var dxByEnt = new Dictionary<uint, float?>();
-        w.Query<Position>().Each((EntityId e, ref Position _) =>
+        foreach (var row in w.Query<Position>())
         {
+            var e = row.Entity;
             dxByEnt[e.Id] = w.TryGetComponent<Velocity>(e, out var v) ? v.Dx : (float?)null;
-        });
+        }
         Assert.Equal(7f, dxByEnt[a.Id]);
         Assert.Null(dxByEnt[b.Id]);
     }
@@ -116,11 +117,11 @@ public class TryGetComponentTests
         w.Set(a, new Position(0, 0));
         w.Set(a, new Velocity(2, 0));
         w.Set(b, new Position(0, 0));
-        w.Query<Position>().Each((EntityId e, ref Position _) =>
+        foreach (var row in w.Query<Position>())
         {
-            ref var v = ref w.TryGetRef<Velocity>(e);
+            ref var v = ref w.TryGetRef<Velocity>(row.Entity);
             if (!Unsafe.IsNullRef(ref v)) v.Dx *= 10f;
-        });
+        }
         Assert.Equal(20f, w.Get<Velocity>(a).Dx);
         Assert.False(w.Has<Velocity>(b));
     }

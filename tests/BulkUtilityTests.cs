@@ -22,7 +22,7 @@ public class BulkUtilityTests
         }
         // Two of them also get a velocity → different archetype.
         var ents = new System.Collections.Generic.List<EntityId>();
-        w.Query<Position>().Each((EntityId e, ref Position _) => ents.Add(e));
+        foreach (var row in w.Query<Position>()) ents.Add(row.Entity);
         w.Set(ents[0], new Velocity(0, 0));
         w.Set(ents[1], new Velocity(0, 0));
         Assert.Equal(4, w.Count<Position>());
@@ -114,7 +114,7 @@ public class BulkUtilityTests
         w.Set(b, new Position(0, 0));
         w.Disable(b);
         int hits = 0;
-        w.Query<Position>().Without(w.Disabled).Each((EntityId _, ref Position _) => hits++);
+        foreach (var _ in w.Query<Position>().Without(w.Disabled)) hits++;
         Assert.Equal(1, hits);
     }
 }

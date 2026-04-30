@@ -6,7 +6,7 @@ namespace Flecs.Tests;
 public class InheritedQueryTests
 {
     [Fact]
-    public void Each_LiteralByDefault_DoesNotMatchInherited()
+    public void LiteralByDefault_DoesNotMatchInherited()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -15,14 +15,13 @@ public class InheritedQueryTests
         w.SetIsA(inst, prefab);
 
         var seen = new List<uint>();
-        w.Query<Position>().Each((EntityId e, ref Position _) => seen.Add(e.Id));
-        // Default literal: only prefab itself owns Position.
+        foreach (var row in w.Query<Position>()) seen.Add(row.Entity.Id);
         Assert.Single(seen);
         Assert.Equal(prefab.Id, seen[0]);
     }
 
     [Fact]
-    public void Each_Inherited_MatchesInstance()
+    public void Inherited_MatchesInstance()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -31,15 +30,14 @@ public class InheritedQueryTests
         w.SetIsA(inst, prefab);
 
         var seen = new List<uint>();
-        w.Query<Position>().Inherited().Each((EntityId e, ref Position _) => seen.Add(e.Id));
-        // Self+Up: prefab (own) + inst (via IsA).
+        foreach (var row in w.Query<Position>().Inherited()) seen.Add(row.Entity.Id);
         Assert.Equal(2, seen.Count);
         Assert.Contains(prefab.Id, seen);
         Assert.Contains(inst.Id, seen);
     }
 
     [Fact]
-    public void Each_Inherited_SharedRefReflectsPrefabValue()
+    public void Inherited_SharedRefReflectsPrefabValue()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -48,54 +46,55 @@ public class InheritedQueryTests
         w.SetIsA(inst, prefab);
 
         var values = new List<float>();
-        w.Query<Position>().Inherited().Each((EntityId e, ref Position p) => values.Add(p.X));
+        foreach (var row in w.Query<Position>().Inherited())
+            values.Add(row.Component1.Value.X);
         Assert.Equal(2, values.Count);
         Assert.All(values, x => Assert.Equal(7, x));
     }
 
     [Fact]
-    public void Each_Inherited_OwnOverridesShared()
+    public void Inherited_OwnOverridesShared()
     {
         var w = new World();
         var prefab = w.CreateEntity();
         w.Set(prefab, new Position(1, 1));
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        w.Set(inst, new Position(99, 99));   // override
+        w.Set(inst, new Position(99, 99));
 
         var byEntity = new Dictionary<uint, float>();
-        w.Query<Position>().Inherited().Each((EntityId e, ref Position p) => byEntity[e.Id] = p.X);
+        foreach (var row in w.Query<Position>().Inherited())
+            byEntity[row.Entity.Id] = row.Component1.Value.X;
         Assert.Equal(1, byEntity[prefab.Id]);
         Assert.Equal(99, byEntity[inst.Id]);
     }
 
     [Fact]
-    public void Each_Inherited_TwoTerms_MixedOwnAndShared()
+    public void Inherited_TwoTerms_MixedOwnAndShared()
     {
         var w = new World();
         var prefab = w.CreateEntity();
         w.Set(prefab, new Position(5, 5));
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        w.Set(inst, new Velocity(2, 3));      // own velocity, shared position
+        w.Set(inst, new Velocity(2, 3));
 
         int hits = 0;
         float gotX = 0f, gotDx = 0f;
-        w.Query<Position, Velocity>().Inherited()
-            .Each((EntityId e, ref Position p, ref Velocity v) =>
-            {
-                if (e.Id != inst.Id) return;
-                hits++;
-                gotX = p.X;
-                gotDx = v.Dx;
-            });
+        foreach (var row in w.Query<Position, Velocity>().Inherited())
+        {
+            if (row.Entity.Id != inst.Id) continue;
+            hits++;
+            gotX = row.Component1.Value.X;
+            gotDx = row.Component2.Value.Dx;
+        }
         Assert.Equal(1, hits);
-        Assert.Equal(5, gotX);    // shared from prefab
-        Assert.Equal(2, gotDx);   // own
+        Assert.Equal(5, gotX);
+        Assert.Equal(2, gotDx);
     }
 
     [Fact]
-    public void Run_Inherited_VisitsBothOwnAndSharedTables()
+    public void Inherited_VisitsBothOwnAndSharedTables()
     {
         var w = new World();
         var prefab = w.CreateEntity();
@@ -105,18 +104,17 @@ public class InheritedQueryTests
 
         int rowsSeen = 0;
         bool sawShared = false;
-        w.Query<Position>().Inherited().Run((in Iter<Position> it) =>
+        foreach (var row in w.Query<Position>().Inherited())
         {
-            rowsSeen += it.Count;
-            if (it.IsShared1) sawShared = true;
-        });
-        // Both prefab's own table (1 row) and inst's inherited-only table (1 row).
+            rowsSeen++;
+            if (row.IsShared1) sawShared = true;
+        }
         Assert.Equal(2, rowsSeen);
         Assert.True(sawShared);
     }
 
     [Fact]
-    public void Each_Inherited_DeepChain()
+    public void Inherited_DeepChain()
     {
         var w = new World();
         var grand = w.CreateEntity();
@@ -127,14 +125,15 @@ public class InheritedQueryTests
         w.SetIsA(child, parent);
 
         var seen = new HashSet<uint>();
-        w.Query<Position>().Inherited().Each((EntityId e, ref Position _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position>().Inherited())
+            seen.Add(row.Entity.Id);
         Assert.Contains(grand.Id, seen);
         Assert.Contains(parent.Id, seen);
         Assert.Contains(child.Id, seen);
     }
 
     [Fact]
-    public void Each_Inherited_RespectsWithout()
+    public void Inherited_RespectsWithout()
     {
         var w = new World();
         w.Tag<Boss>();
@@ -147,8 +146,8 @@ public class InheritedQueryTests
         w.Add<Boss>(bossInst);
 
         var seen = new HashSet<uint>();
-        w.Query<Position>().Inherited().Without<Boss>()
-            .Each((EntityId e, ref Position _) => seen.Add(e.Id));
+        foreach (var row in w.Query<Position>().Inherited().Without<Boss>())
+            seen.Add(row.Entity.Id);
         Assert.Contains(prefab.Id, seen);
         Assert.Contains(inst.Id, seen);
         Assert.DoesNotContain(bossInst.Id, seen);

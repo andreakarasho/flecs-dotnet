@@ -33,8 +33,8 @@ public class PipelineTests
         // Two systems on same phase, disjoint write sets → one wave.
         var qa = w.Query<Position>();
         var qb = w.Query<Velocity>();
-        w.System("A", w.OnUpdate, qa, (EntityId _, ref Position _p) => { });
-        w.System("B", w.OnUpdate, qb, (EntityId _, ref Velocity _v) => { });
+        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
         var waves = w.GetPhaseWaves(w.OnUpdate);
         Assert.Single(waves);
         Assert.Equal(2, waves[0].Count);
@@ -46,8 +46,8 @@ public class PipelineTests
         var w = new World();
         var qa = w.Query<Position>();
         var qb = w.Query<Position>();
-        w.System("A", w.OnUpdate, qa, (EntityId _, ref Position _p) => { });
-        w.System("B", w.OnUpdate, qb, (EntityId _, ref Position _p) => { });
+        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
         var waves = w.GetPhaseWaves(w.OnUpdate);
         Assert.Equal(2, waves.Count);
     }
@@ -58,8 +58,8 @@ public class PipelineTests
         var w = new World();
         var qa = w.Query<Position>().Read<Position>();
         var qb = w.Query<Position>().Read<Position>();
-        w.System("A", w.OnUpdate, qa, (EntityId _, ref Position _p) => { });
-        w.System("B", w.OnUpdate, qb, (EntityId _, ref Position _p) => { });
+        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
         var waves = w.GetPhaseWaves(w.OnUpdate);
         Assert.Single(waves);
         Assert.Equal(2, waves[0].Count);
@@ -70,9 +70,9 @@ public class PipelineTests
     {
         var w = new World();
         var qa = w.Query<Position, Velocity>().Read<Velocity>();
-        var qb = w.Query<Velocity>(); // writes Velocity
-        w.System("A", w.OnUpdate, qa, (EntityId _, ref Position _p, ref Velocity _v) => { });
-        w.System("B", w.OnUpdate, qb, (EntityId _, ref Velocity _v) => { });
+        var qb = w.Query<Velocity>();
+        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
         var waves = w.GetPhaseWaves(w.OnUpdate);
         Assert.Equal(2, waves.Count);
     }
@@ -84,9 +84,10 @@ public class PipelineTests
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Velocity(1, 2));
-        w.System<Position, Velocity>("Move", w.OnUpdate,
-            (EntityId _, ref Position p, ref Velocity v) =>
-            { p.X += v.Dx; p.Y += v.Dy; });
+        w.System<Position, Velocity>("Move", w.OnUpdate, q =>
+        {
+            foreach (var (p, v) in q) { p.Value.X += v.Value.Dx; p.Value.Y += v.Value.Dy; }
+        });
         w.Progress(0f);
         Assert.Equal(new Position(1, 2), w.Get<Position>(e));
     }
@@ -95,7 +96,6 @@ public class PipelineTests
     public void Progress_Parallel_NonConflicting_ProducesSameResult()
     {
         var w = new World();
-        // Pre-register components so worker threads don't race on type lookup.
         w.Component<Position>(); w.Component<Velocity>();
         w.UseWorkers(2);
         var ents = new EntityId[1000];
@@ -105,11 +105,14 @@ public class PipelineTests
             w.Set(ents[i], new Position(0, 0));
             w.Set(ents[i], new Velocity(1, 1));
         }
-        // Two disjoint-write systems — pack into one wave, run parallel.
-        w.System<Position>("BumpPos", w.OnUpdate,
-            (EntityId _, ref Position p) => { p.X += 1; });
-        w.System<Velocity>("BumpVel", w.OnUpdate,
-            (EntityId _, ref Velocity v) => { v.Dx += 1; });
+        w.System<Position>("BumpPos", w.OnUpdate, q =>
+        {
+            foreach (var row in q) row.Component1.Value.X += 1;
+        });
+        w.System<Velocity>("BumpVel", w.OnUpdate, q =>
+        {
+            foreach (var row in q) row.Component1.Value.Dx += 1;
+        });
         for (int i = 0; i < 5; i++) w.Progress(0f);
         for (int i = 0; i < ents.Length; i++)
         {
@@ -126,9 +129,10 @@ public class PipelineTests
         w.UseWorkers(2);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        // System adds Velocity inside parallel wave — must queue, not race.
-        w.System<Position>("AddVel", w.OnUpdate,
-            (EntityId ent, ref Position _p) => { w.Set(ent, new Velocity(7, 8)); });
+        w.System<Position>("AddVel", w.OnUpdate, q =>
+        {
+            foreach (var row in q) w.Set(row.Entity, new Velocity(7, 8));
+        });
         w.Progress(0f);
         Assert.True(w.Owns<Velocity>(e));
         Assert.Equal(new Velocity(7, 8), w.Get<Velocity>(e));
@@ -142,8 +146,10 @@ public class PipelineTests
         w.UseWorkers(0);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        w.System<Position>("Bump", w.OnUpdate,
-            (EntityId _, ref Position p) => { p.X += 1; });
+        w.System<Position>("Bump", w.OnUpdate, q =>
+        {
+            foreach (var row in q) row.Component1.Value.X += 1;
+        });
         w.Progress(0f);
         Assert.Equal(1f, w.Get<Position>(e).X);
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Flecs;
@@ -48,52 +49,52 @@ public sealed partial class World
         return h;
     }
 
-    // Typed query-system sugar — Each callback wrapped in a system. Auto-
-    // populates the handle's r/w sets from the query (every term defaults to
-    // write; mark explicit reads via the .Read<T>() builder before calling
+    // Typed query-system sugar — body iterates the cached query directly.
+    // Auto-populates the handle's r/w sets from the query (every term defaults
+    // to write; mark explicit reads via the .Read<T>() builder before calling
     // System<...>). Sets ParallelSafe = true since the action is a pure
-    // Each invocation with no untracked side effects.
-    public SystemHandle System<T1>(string name, EntityId phase, EachAction<T1> each)
+    // query-iteration with no untracked side effects.
+    public SystemHandle System<T1>(string name, EntityId phase, Action<Query<T1>> body)
         where T1 : struct
     {
         var q = Query<T1>();
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
 
-    public SystemHandle System<T1, T2>(string name, EntityId phase, EachAction<T1, T2> each)
+    public SystemHandle System<T1, T2>(string name, EntityId phase, Action<Query<T1, T2>> body)
         where T1 : struct where T2 : struct
     {
         var q = Query<T1, T2>();
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
 
-    public SystemHandle System<T1, T2, T3>(string name, EntityId phase, EachAction<T1, T2, T3> each)
+    public SystemHandle System<T1, T2, T3>(string name, EntityId phase, Action<Query<T1, T2, T3>> body)
         where T1 : struct where T2 : struct where T3 : struct
     {
         var q = Query<T1, T2, T3>();
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
 
     // Pre-built query overload — caller controls .Read<T>() before passing in.
-    public SystemHandle System<T1>(string name, EntityId phase, Query<T1> q, EachAction<T1> each)
+    public SystemHandle System<T1>(string name, EntityId phase, Query<T1> q, Action<Query<T1>> body)
         where T1 : struct
     {
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
-    public SystemHandle System<T1, T2>(string name, EntityId phase, Query<T1, T2> q, EachAction<T1, T2> each)
+    public SystemHandle System<T1, T2>(string name, EntityId phase, Query<T1, T2> q, Action<Query<T1, T2>> body)
         where T1 : struct where T2 : struct
     {
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
-    public SystemHandle System<T1, T2, T3>(string name, EntityId phase, Query<T1, T2, T3> q, EachAction<T1, T2, T3> each)
+    public SystemHandle System<T1, T2, T3>(string name, EntityId phase, Query<T1, T2, T3> q, Action<Query<T1, T2, T3>> body)
         where T1 : struct where T2 : struct where T3 : struct
     {
-        var h = System(name, phase, (w, dt) => q.Each(each));
+        var h = System(name, phase, (w, dt) => body(q));
         return AttachQueryAccess(h, q);
     }
 
@@ -731,6 +732,10 @@ public sealed partial class World
         if (!_typeToEntity.TryGetValue(typeof(T), out var ent)) return false;
         return _canToggleIds.Contains(ent.Id);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsCanToggleId(Id id)
+        => _canToggleIds.Contains(id.IsPair ? id.Relation : id.Component);
 
     // True if the id (component or pair) blocks IsA propagation. For pairs,
     // checks the relation entity.

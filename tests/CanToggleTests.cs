@@ -86,10 +86,8 @@ public class CanToggleTests
         w.SetEnabled<Velocity>(b, false);
 
         int sum = 0;
-        w.Query<Position, Velocity>().Each((EntityId _, ref Position _p, ref Velocity v) =>
-        {
-            sum += (int)v.Dx;
-        });
+        foreach (var (_, v) in w.Query<Position, Velocity>())
+            sum += (int)v.Value.Dx;
         Assert.Equal(4, sum); // 1 + 3, b skipped
     }
 

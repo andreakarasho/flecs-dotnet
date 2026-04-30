@@ -8,29 +8,7 @@ public class HotPathAllocTests
     private static long Bytes() => GC.GetAllocatedBytesForCurrentThread();
 
     [Fact]
-    public void Each_Iter_ZeroAllocSteadyState()
-    {
-        var w = new World();
-        for (int i = 0; i < 100; i++)
-        {
-            var e = w.CreateEntity();
-            w.Set(e, new Position(i, i));
-            w.Set(e, new Velocity(1, 1));
-        }
-        var q = w.Query<Position, Velocity>();
-        // Warmup: build matched-table cache + JIT.
-        for (int i = 0; i < 50; i++)
-            q.Each((EntityId _, ref Position p, ref Velocity v) => { p.X += v.Dx; });
-        var before = Bytes();
-        for (int i = 0; i < 1000; i++)
-            q.Each((EntityId _, ref Position p, ref Velocity v) => { p.X += v.Dx; });
-        var after = Bytes();
-        // Allow tiny noise but expect ~0.
-        Assert.True(after - before < 1000, $"Each over 1000 iters allocated {after - before} bytes");
-    }
-
-    [Fact]
-    public void Run_Iter_ZeroAllocSteadyState()
+    public void Rows_ZeroAllocSteadyState()
     {
         var w = new World();
         for (int i = 0; i < 100; i++)
@@ -41,22 +19,12 @@ public class HotPathAllocTests
         }
         var q = w.Query<Position, Velocity>();
         for (int i = 0; i < 50; i++)
-            q.Run((in Iter<Position, Velocity> it) =>
-            {
-                var p = it.Field1();
-                var v = it.Field2();
-                for (int r = 0; r < it.Count; r++) p[r].X += v[r].Dx;
-            });
+            foreach (var (p, v) in q) p.Value.X += v.Value.Dx;
         var before = Bytes();
         for (int i = 0; i < 1000; i++)
-            q.Run((in Iter<Position, Velocity> it) =>
-            {
-                var p = it.Field1();
-                var v = it.Field2();
-                for (int r = 0; r < it.Count; r++) p[r].X += v[r].Dx;
-            });
+            foreach (var (p, v) in q) p.Value.X += v.Value.Dx;
         var after = Bytes();
-        Assert.True(after - before < 1000, $"Run over 1000 iters allocated {after - before} bytes");
+        Assert.True(after - before < 1000, $"Rows over 1000 iters allocated {after - before} bytes");
     }
 
     [Fact]
@@ -178,18 +146,18 @@ public class HotPathAllocTests
         var q2 = w2.Query<Position, Velocity>();
         for (int i = 0; i < 50; i++)
         {
-            q1.Each((EntityId _, ref Position p, ref Velocity v) => p.X += v.Dx);
-            q2.Each((EntityId _, ref Position p, ref Velocity v) => p.Y += v.Dy);
+            foreach (var (p, v) in q1) p.Value.X += v.Value.Dx;
+            foreach (var (p, v) in q2) p.Value.Y += v.Value.Dy;
         }
         var before = Bytes();
         for (int i = 0; i < 1000; i++)
         {
-            q1.Each((EntityId _, ref Position p, ref Velocity v) => p.X += v.Dx);
-            q2.Each((EntityId _, ref Position p, ref Velocity v) => p.Y += v.Dy);
+            foreach (var (p, v) in q1) p.Value.X += v.Value.Dx;
+            foreach (var (p, v) in q2) p.Value.Y += v.Value.Dy;
         }
         var after = Bytes();
         Assert.True(after - before < 2000,
-            $"Two-world interleaved Each over 1000+1000 iters allocated {after - before} bytes");
+            $"Two-world interleaved Rows over 1000+1000 iters allocated {after - before} bytes");
     }
 
     [Fact]
