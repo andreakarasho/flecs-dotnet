@@ -241,6 +241,12 @@ public sealed partial class World
     internal double _totalTime;
     internal float _lastDeltaTime;
 
+    // Tick sources — timers and rate filters. Progress evaluates these in
+    // registration order before dispatching systems; Systems with TickSource
+    // bound run only when the source's TickSource.Tick is true that frame.
+    internal readonly System.Collections.Generic.List<EntityId> _timerSources = new();
+    internal readonly System.Collections.Generic.List<EntityId> _rateSources = new();
+
     // Snapshot of world counters + frame stats. Cheap O(table count) — walks
     // tables for empty-count and tag-count tallies. Mirrors flecs ecs_get_world_info.
     public WorldInfo GetInfo()

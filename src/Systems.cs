@@ -32,6 +32,10 @@ public sealed class SystemHandle
     // other ParallelSafe systems whose r/w sets don't conflict. Default false:
     // unknown side effects → serialize. System<T...> sugar sets this true.
     public bool ParallelSafe { get; internal set; }
+    // Optional tick source — system runs only on Progress calls where the
+    // bound source's TickSource.Tick is true. Default 0 = run every Progress.
+    // Sources are timers (world.Timer) or rate filters (world.Rate).
+    public EntityId TickSource { get; set; }
 
     internal SystemHandle(string name, EntityId phase, SystemAction action)
     { Name = name; Phase = phase; Action = action; }

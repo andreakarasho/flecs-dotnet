@@ -188,6 +188,7 @@ public sealed partial class World
         _lastDeltaTime = deltaTime;
         _totalTime += deltaTime;
         _frameCount++;
+        AdvanceTickSources(deltaTime);
         for (int p = 0; p < _phaseOrder.Length; p++)
         {
             var phase = _phaseOrder[p];
@@ -197,6 +198,87 @@ public sealed partial class World
                 var wave = waves[w];
                 RunWave(wave, deltaTime);
             }
+        }
+    }
+
+    // Tick-source factories. Timer accumulates real time and ticks every
+    // Period seconds. Rate divides another tick source by an integer counter.
+    // Both expose state via the (TickSource, Timer/RateFilter) component
+    // pair on the returned entity; Progress flips Tick at most once per
+    // Progress call.
+    public EntityId Timer(float period)
+    {
+        if (period <= 0f) ThrowHelper.NegativeCount(nameof(period));
+        lock (_lock)
+        {
+            var e = CreateEntityCore();
+            Set(e, new Timer(period, 0f));
+            Set(e, new TickSource(false));
+            _timerSources.Add(e);
+            return e;
+        }
+    }
+
+    public EntityId Rate(EntityId source, uint rate)
+    {
+        if (rate == 0) ThrowHelper.NegativeCount(nameof(rate));
+        lock (_lock)
+        {
+            var e = CreateEntityCore();
+            Set(e, new RateFilter(rate, 0, source.Id));
+            Set(e, new TickSource(false));
+            _rateSources.Add(e);
+            return e;
+        }
+    }
+
+    // Walk timers + rate filters once per Progress, set Tick flags. Rates
+    // see their source's Tick set this same frame because timers come first.
+    private void AdvanceTickSources(float deltaTime)
+    {
+        if (_timerSources.Count == 0 && _rateSources.Count == 0) return;
+        for (int i = 0; i < _timerSources.Count; i++)
+        {
+            var e = _timerSources[i];
+            if (!IsAlive(e)) continue;
+            ref var t = ref Get<Timer>(e);
+            ref var src = ref Get<TickSource>(e);
+            t.Accumulated += deltaTime;
+            if (t.Accumulated >= t.Period)
+            {
+                t.Accumulated -= t.Period;
+                src.Tick = true;
+            }
+            else src.Tick = false;
+        }
+        for (int i = 0; i < _rateSources.Count; i++)
+        {
+            var e = _rateSources[i];
+            if (!IsAlive(e)) continue;
+            ref var r = ref Get<RateFilter>(e);
+            ref var src = ref Get<TickSource>(e);
+            // Source tick: 0 = drive off Progress (every frame), else read
+            // the bound source's TickSource.Tick.
+            bool srcTick;
+            if (r.SourceId == 0) srcTick = true;
+            else
+            {
+                ref var srcSlot = ref GetSlot(r.SourceId);
+                if (!srcSlot.Alive) { src.Tick = false; continue; }
+                var srcEnt = new EntityId(r.SourceId, srcSlot.Generation);
+                srcTick = Get<TickSource>(srcEnt).Tick;
+            }
+            if (srcTick)
+            {
+                r.Counter++;
+                if (r.Counter >= r.Rate)
+                {
+                    r.Counter = 0;
+                    src.Tick = true;
+                }
+                else src.Tick = false;
+            }
+            else src.Tick = false;
         }
     }
 
@@ -212,8 +294,19 @@ public sealed partial class World
         {
             var s = wave[i];
             if (!s.Enabled) continue;
+            if (!ShouldRunSystem(s)) continue;
             s.Action(this, deltaTime);
         }
+    }
+
+    // Tick-source gate. Returns true when system has no source (always run)
+    // or its source ticked this Progress.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool ShouldRunSystem(SystemHandle s)
+    {
+        if (s.TickSource.Id == 0) return true;
+        if (!IsAlive(s.TickSource)) return true;
+        return Get<TickSource>(s.TickSource).Tick;
     }
 
     // Configure worker pool size. 0 → sequential (default). N > 0 → spawn N
@@ -253,6 +346,7 @@ public sealed partial class World
             tasks[idx] = Task.Run(() =>
             {
                 if (!s.Enabled) return;
+                if (!ShouldRunSystem(s)) return;
                 Stage.SetCurrent(stage);
                 try { s.Action(this, deltaTime); }
                 finally { Stage.ClearCurrent(); }
