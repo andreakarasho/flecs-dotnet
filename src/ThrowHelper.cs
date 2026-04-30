@@ -99,6 +99,11 @@ internal static class ThrowHelper
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void JsonExpected(string what)
+        => throw new InvalidOperationException($"JSON snapshot: expected {what}.");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void IsAToFinal(uint targetId)
         => throw new InvalidOperationException($"Cannot IsA to entity #{targetId} marked Final.");
 
