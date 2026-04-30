@@ -696,6 +696,7 @@ public sealed partial class World
     private void MarkCanToggleLocked(EntityId id)
     {
         if (!_canToggleIds.Add(id.Id)) return;
+        _anyCanToggle = true;
         EnsureHasIdLocked(id, (Id)CanToggle);
         // Retroactively allocate bitsets in existing tables that hold this id
         // (or any pair where this id is the relation). Existing rows: enabled.
@@ -759,7 +760,10 @@ public sealed partial class World
             if (!_componentInfo.TryGetValue(compId, out _))
                 ThrowHelper.IsTagNotComponent(typeof(T));
             if (_sparseIds.Add(ent.Id))
+            {
                 _sparseStorage[ent.Id] = new SparseStorage<T>(compId);
+                _anySparse = true;
+            }
         }
     }
 

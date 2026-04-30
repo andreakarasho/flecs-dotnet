@@ -126,20 +126,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7>
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7>.Rent() : null;
         _defer = q._world.Readonly();
@@ -423,22 +411,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8>
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8>.Rent() : null;
         _defer = q._world.Readonly();
@@ -734,24 +708,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9>.Rent() : null;
         _defer = q._world.Readonly();
@@ -1059,26 +1017,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>.Rent() : null;
         _defer = q._world.Readonly();
@@ -1398,28 +1338,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>.Rent() : null;
         _defer = q._world.Readonly();
@@ -1751,30 +1671,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsCanToggleId(q._c12)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
-            || q._world.IsSparseId(q._c12)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>.Rent() : null;
         _defer = q._world.Readonly();
@@ -2118,32 +2016,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsCanToggleId(q._c12)
-            || q._world.IsCanToggleId(q._c13)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
-            || q._world.IsSparseId(q._c12)
-            || q._world.IsSparseId(q._c13)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>.Rent() : null;
         _defer = q._world.Readonly();
@@ -2499,34 +2373,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsCanToggleId(q._c12)
-            || q._world.IsCanToggleId(q._c13)
-            || q._world.IsCanToggleId(q._c14)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
-            || q._world.IsSparseId(q._c12)
-            || q._world.IsSparseId(q._c13)
-            || q._world.IsSparseId(q._c14)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>.Rent() : null;
         _defer = q._world.Readonly();
@@ -2894,36 +2742,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsCanToggleId(q._c12)
-            || q._world.IsCanToggleId(q._c13)
-            || q._world.IsCanToggleId(q._c14)
-            || q._world.IsCanToggleId(q._c15)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
-            || q._world.IsSparseId(q._c12)
-            || q._world.IsSparseId(q._c13)
-            || q._world.IsSparseId(q._c14)
-            || q._world.IsSparseId(q._c15)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14) || q._world.IsCanToggleId(q._c15)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14) || q._world.IsSparseId(q._c15)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>.Rent() : null;
         _defer = q._world.Readonly();
@@ -3303,38 +3123,8 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
-            || q._world.IsCanToggleId(q._c1)
-            || q._world.IsCanToggleId(q._c2)
-            || q._world.IsCanToggleId(q._c3)
-            || q._world.IsCanToggleId(q._c4)
-            || q._world.IsCanToggleId(q._c5)
-            || q._world.IsCanToggleId(q._c6)
-            || q._world.IsCanToggleId(q._c7)
-            || q._world.IsCanToggleId(q._c8)
-            || q._world.IsCanToggleId(q._c9)
-            || q._world.IsCanToggleId(q._c10)
-            || q._world.IsCanToggleId(q._c11)
-            || q._world.IsCanToggleId(q._c12)
-            || q._world.IsCanToggleId(q._c13)
-            || q._world.IsCanToggleId(q._c14)
-            || q._world.IsCanToggleId(q._c15)
-            || q._world.IsCanToggleId(q._c16)
-            || q._world.IsSparseId(q._c1)
-            || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3)
-            || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5)
-            || q._world.IsSparseId(q._c6)
-            || q._world.IsSparseId(q._c7)
-            || q._world.IsSparseId(q._c8)
-            || q._world.IsSparseId(q._c9)
-            || q._world.IsSparseId(q._c10)
-            || q._world.IsSparseId(q._c11)
-            || q._world.IsSparseId(q._c12)
-            || q._world.IsSparseId(q._c13)
-            || q._world.IsSparseId(q._c14)
-            || q._world.IsSparseId(q._c15)
-            || q._world.IsSparseId(q._c16)
+            || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14) || q._world.IsCanToggleId(q._c15) || q._world.IsCanToggleId(q._c16)))
+            || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14) || q._world.IsSparseId(q._c15) || q._world.IsSparseId(q._c16)))
             || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>.Rent() : null;
         _defer = q._world.Readonly();

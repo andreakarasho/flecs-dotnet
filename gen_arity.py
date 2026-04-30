@@ -114,9 +114,13 @@ def gen_row_enum(n):
     ptrs = "\n".join(f"    private Ptr<T{i}> _ptr{i};" for i in range(1, n + 1))
     strides = ", ".join(f"_stride{i}" for i in range(1, n + 1))
 
-    ctor_toggle = "\n            || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
-    ctor_sparse = "\n            || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
-    ctor_check = ctor_toggle + "\n            || " + ctor_sparse + "\n            || (q._world._anyUnion && q.HasUnionWith)"
+    toggle_ors = " || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
+    sparse_ors = " || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
+    ctor_check = (
+        f"(q._world._anyCanToggle && ({toggle_ors}))\n"
+        f"            || (q._world._anySparse && ({sparse_ors}))\n"
+        f"            || (q._world._anyUnion && q.HasUnionWith)"
+    )
     stride_init = " ".join(f"_stride{i} = 1;" for i in range(1, n + 1))
 
     component_props = "\n".join(

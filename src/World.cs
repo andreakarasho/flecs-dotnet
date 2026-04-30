@@ -166,6 +166,11 @@ public sealed partial class World
     // Component ids opted into non-fragmenting toggle. Tables containing these
     // ids allocate parallel Bitset columns. Mirrors flecs CanToggle trait.
     internal readonly HashSet<uint> _canToggleIds = new();
+    // Hot-path skip flags — set true on first MarkCanToggle / MarkSparse.
+    // RowEnumerator ctor short-circuits the per-term Contains probe when
+    // false (no allocation, no HashSet call). Mirrors `_anyUnion` below.
+    internal bool _anyCanToggle;
+    internal bool _anySparse;
     // Sparse component ids — value lives in side-table SparseStorage<T>, not in
     // archetype columns. Set/Get/Has/Owns/Remove route through the storage.
     // Mirrors flecs Sparse trait. Iteration support deferred — Query<SparseT>
