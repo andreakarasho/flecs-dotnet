@@ -712,6 +712,8 @@ public sealed partial class World
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return false;
         if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return false;
+        if (_unionRelIds.Contains(rel.Id))
+            return _unionStorage[rel.Id].HasTarget(entity.Id, tgt.Id);
         ref var rec = ref GetSlot(entity.Id);
         var pair = Id.MakePair(rel, tgt);
         if (_tablesById[rec.TableId]!.Has(pair)) return true;
@@ -722,6 +724,8 @@ public sealed partial class World
     public bool Has(EntityId entity, Id componentId)
     {
         if (!IsAlive(entity)) return false;
+        if (componentId.IsPair && _unionRelIds.Contains(componentId.Relation))
+            return _unionStorage[componentId.Relation].HasTarget(entity.Id, componentId.Target);
         ref var rec = ref GetSlot(entity.Id);
         if (_tablesById[rec.TableId]!.Has(componentId)) return true;
         var (found, _, _) = FindInIsAChain(entity, componentId);
@@ -746,6 +750,8 @@ public sealed partial class World
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return false;
         if (!_typeToEntity.TryGetValue(typeof(TT), out var tgt)) return false;
+        if (_unionRelIds.Contains(rel.Id))
+            return _unionStorage[rel.Id].HasTarget(entity.Id, tgt.Id);
         ref var rec = ref GetSlot(entity.Id);
         return _tablesById[rec.TableId]!.Has(Id.MakePair(rel, tgt));
     }
@@ -753,8 +759,48 @@ public sealed partial class World
     public bool Owns(EntityId entity, Id componentId)
     {
         if (!IsAlive(entity)) return false;
+        if (componentId.IsPair && _unionRelIds.Contains(componentId.Relation))
+            return _unionStorage[componentId.Relation].HasTarget(entity.Id, componentId.Target);
         ref var rec = ref GetSlot(entity.Id);
         return _tablesById[rec.TableId]!.Has(componentId);
+    }
+
+    // ========== Union helpers ==========
+    //
+    // GetUnionTarget<TR>: current target for entity's (TR, *) Union pair, or
+    // EntityId default (Id=0) if absent. Throw if TR not Union.
+    public EntityId GetUnionTarget<TR>(EntityId entity) where TR : struct
+    {
+        if (!IsAlive(entity)) return default;
+        if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return default;
+        if (!_unionRelIds.Contains(rel.Id)) ThrowHelper.NotUnionRelation(typeof(TR));
+        var storage = _unionStorage[rel.Id];
+        var tgt = storage.GetTarget(entity.Id);
+        if (tgt == 0) return default;
+        ref var slot = ref GetSlot(tgt);
+        return new EntityId(tgt, slot.Generation);
+    }
+
+    public EntityId GetUnionTarget(EntityId entity, EntityId relation)
+    {
+        if (!IsAlive(entity)) return default;
+        if (!_unionRelIds.Contains(relation.Id)) return default;
+        var tgt = _unionStorage[relation.Id].GetTarget(entity.Id);
+        if (tgt == 0) return default;
+        ref var slot = ref GetSlot(tgt);
+        return new EntityId(tgt, slot.Generation);
+    }
+
+    // RemoveUnion<TR>: drop the entity's (TR, *) entry regardless of current
+    // target. Fires OnRemove on the (TR, prev) pair.
+    public void RemoveUnion<TR>(EntityId entity) where TR : struct
+    {
+        lock (_lock)
+        {
+            if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return;
+            if (!_unionRelIds.Contains(rel.Id)) return;
+            UnionClearLocked(entity, rel.Id);
+        }
     }
 
     // Add T as tag/component (no value set; component slot defaults).

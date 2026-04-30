@@ -172,6 +172,11 @@ public sealed partial class World
     // currently does not match sparse-only terms (NYI).
     internal readonly HashSet<uint> _sparseIds = new();
     internal readonly Dictionary<uint, ISparseStorage> _sparseStorage = new();
+    // Union relation ids — relation enforces single (rel, *) per entity AND
+    // stores target in side-table UnionStorage (no archetype migration on
+    // target switch). Mirrors flecs Union trait.
+    internal readonly HashSet<uint> _unionRelIds = new();
+    internal readonly Dictionary<uint, UnionStorage> _unionStorage = new();
 
     public World()
     {
@@ -353,6 +358,12 @@ public sealed partial class World
         {
             foreach (var kv in _sparseStorage)
                 kv.Value.OnEntityDelete(this, entity);
+        }
+        // Union cleanup — drop any (rel, *) entries on this entity.
+        if (_unionStorage.Count > 0)
+        {
+            foreach (var kv in _unionStorage)
+                UnionClearLocked(entity, kv.Key);
         }
         var table = _tablesById[rec.TableId]!;
         for (int i = 0; i < table.Columns.Length; i++)
@@ -554,6 +565,14 @@ public sealed partial class World
     {
         ref var rec = ref GetSlot(entity.Id);
         if (!rec.Alive || rec.Generation != entity.Generation) ThrowHelper.EntityDead();
+        // Union pair — store target in side table; never enters archetype.
+        // Switching target = O(1), no migration. Fires OnRemove(prev pair) +
+        // OnAdd(new pair) when target changes; pure-overwrite is no-op.
+        if (compId.IsPair && _unionRelIds.Contains(compId.Relation))
+        {
+            UnionAddLocked(entity, compId);
+            return;
+        }
         var src = _tablesById[rec.TableId]!;
         if (src.Has(compId)) return;
         // Trait enforcement on pairs.
@@ -641,6 +660,13 @@ public sealed partial class World
                 storage.OnEntityDelete(this, entity);
             return;
         }
+        // Union pair — drop side-storage entry only if current target matches
+        // the requested target. Mirrors archetype Has-check semantics.
+        if (compId.IsPair && _unionRelIds.Contains(compId.Relation))
+        {
+            UnionRemoveLocked(entity, compId);
+            return;
+        }
         var src = _tablesById[rec.TableId]!;
         if (!src.Has(compId)) return;
         // Fire OnRemove + Dtor while data still in src (user can read it).
@@ -677,6 +703,50 @@ public sealed partial class World
             }
         }
     }
+
+    // Union pair Add — store target in side table. Fire OnRemove(prev pair)
+    // + OnAdd(new pair) when target changes; pure overwrite of same target
+    // is a no-op (mirrors archetype path early-out on Has).
+    private void UnionAddLocked(EntityId entity, Id pair)
+    {
+        var storage = _unionStorage[pair.Relation];
+        bool had = storage.Set(entity.Id, pair.Target, out var prev);
+        if (had && prev == pair.Target) return;
+        if (had)
+        {
+            var prevPair = MakePairFromUints(pair.Relation, prev);
+            GetIdHooks(prevPair)?.OnRemove?.Invoke(this, entity);
+            DispatchMultiObsLocked(Event.OnRemove, entity, prevPair);
+        }
+        GetIdHooks(pair)?.OnAdd?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnAdd, entity, pair);
+    }
+
+    // Union pair Remove — drop entry only if current target matches.
+    // Use UnionClearLocked(entity, rel) to drop regardless of target.
+    private void UnionRemoveLocked(EntityId entity, Id pair)
+    {
+        var storage = _unionStorage[pair.Relation];
+        if (!storage.HasTarget(entity.Id, pair.Target)) return;
+        storage.Remove(entity.Id, out _);
+        GetIdHooks(pair)?.OnRemove?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnRemove, entity, pair);
+    }
+
+    // Union (rel, *) clear — drop the entity's entry regardless of current
+    // target. Fires OnRemove on the (rel, prev) pair.
+    internal void UnionClearLocked(EntityId entity, uint relId)
+    {
+        if (!_unionStorage.TryGetValue(relId, out var storage)) return;
+        if (!storage.Remove(entity.Id, out var prev)) return;
+        var pair = MakePairFromUints(relId, prev);
+        GetIdHooks(pair)?.OnRemove?.Invoke(this, entity);
+        DispatchMultiObsLocked(Event.OnRemove, entity, pair);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Id MakePairFromUints(uint rel, uint tgt)
+        => new((1ul << 63) | ((ulong)rel << 32) | (ulong)tgt);
 
     // BFS along (relUint, *) pairs from 'startId'. Returns true if 'targetId'
     // is reachable. Caller holds _lock. Uses pooled scratch buffers.

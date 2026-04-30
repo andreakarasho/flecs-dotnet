@@ -774,6 +774,54 @@ public sealed partial class World
     internal bool IsSparseId(Id id)
         => !id.IsPair && _sparseIds.Contains(id.Component);
 
+    // ========== Union trait ==========
+    //
+    // MarkUnion<TR>: relation TR becomes a Union — single (TR, *) per entity,
+    // target stored in side-table UnionStorage, no archetype migration on
+    // target switch. Add<TR, TT> overwrites the previous target. Has<TR, TT>
+    // checks side storage. Best fit for state-machine targets that change
+    // frequently. Mirrors flecs Union trait.
+    //
+    // Restrictions:
+    //   • TR must be a tag (no payload). Union doesn't store value data —
+    //     the target IS the value.
+    //   • Cannot combine with Sparse on the same relation (Sparse already
+    //     non-fragmenting; Union adds enum semantics on top of pairs).
+    //   • Mark early. Existing archetype-resident (TR, *) pairs are NOT
+    //     migrated; they remain in archetype until manually removed.
+    public void MarkUnion<TR>() where TR : struct
+    {
+        lock (_lock)
+        {
+            var rel = GetOrRegisterAnyLocked<TR>();
+            if (_unionRelIds.Add(rel.Id))
+                _unionStorage[rel.Id] = new UnionStorage(rel.Id);
+        }
+    }
+
+    public void MarkUnion(EntityId relation)
+    {
+        lock (_lock)
+        {
+            if (_unionRelIds.Add(relation.Id))
+                _unionStorage[relation.Id] = new UnionStorage(relation.Id);
+        }
+    }
+
+    public bool IsUnion<TR>() where TR : struct
+    {
+        if (!_typeToEntity.TryGetValue(typeof(TR), out var rel)) return false;
+        return _unionRelIds.Contains(rel.Id);
+    }
+    public bool IsUnion(EntityId rel) => _unionRelIds.Contains(rel.Id);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsUnionRel(uint relId) => _unionRelIds.Contains(relId);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsUnionPair(Id id)
+        => id.IsPair && _unionRelIds.Contains(id.Relation);
+
     // True if the id (component or pair) blocks IsA propagation. For pairs,
     // checks the relation entity.
     private bool IsIdDontInherit(Id id)

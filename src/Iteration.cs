@@ -228,9 +228,11 @@ public ref struct RowEnumerator<T1> where T1 : struct
     internal RowEnumerator(Query<T1> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional
             || q._world.IsCanToggleId(q._c1)
-            || q._world.IsSparseId(q._c1);
+            || q._world.IsSparseId(q._c1)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -281,6 +283,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
             else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) _ptr1.Value = ref f.Sparse1.GetRef(entId);
@@ -365,9 +368,11 @@ public ref struct RowEnumerator<T1, T2>
     internal RowEnumerator(Query<T1, T2> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
-            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2);
+            || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1, T2>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -420,6 +425,7 @@ public ref struct RowEnumerator<T1, T2>
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
             else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
@@ -524,11 +530,13 @@ public ref struct RowEnumerator<T1, T2, T3>
     internal RowEnumerator(Query<T1, T2, T3> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3);
+            || q._world.IsSparseId(q._c3)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1, T2, T3>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -584,6 +592,7 @@ public ref struct RowEnumerator<T1, T2, T3>
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
             else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
@@ -699,11 +708,13 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     internal RowEnumerator(Query<T1, T2, T3, T4> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
-            || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4);
+            || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -762,6 +773,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } }
             else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } }
@@ -859,13 +871,15 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     internal RowEnumerator(Query<T1, T2, T3, T4, T5> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
             || q._world.IsCanToggleId(q._c5)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5);
+            || q._world.IsSparseId(q._c5)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -928,6 +942,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }
@@ -1029,13 +1044,15 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     internal RowEnumerator(Query<T1, T2, T3, T4, T5, T6> q)
     {
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
             || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
-            || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6);
+            || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6)
+            || q.HasUnionWith;
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -1101,6 +1118,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         while (_rowIdx < _count)
         {
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) { _rowIdx++; continue; }
             if (f.Sparse1 != null) { if (!f.Sparse1.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs1 != null && !f.Bs1.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse2 != null) { if (!f.Sparse2.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs2 != null && !f.Bs2.Get(_rowIdx)) { _rowIdx++; continue; }
             if (f.Sparse3 != null) { if (!f.Sparse3.Has(entId)) { _rowIdx++; continue; } } else if (f.Bs3 != null && !f.Bs3.Get(_rowIdx)) { _rowIdx++; continue; }

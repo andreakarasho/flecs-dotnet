@@ -93,6 +93,12 @@ internal static class ThrowHelper
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void NotUnionRelation(Type t)
+        => throw new InvalidOperationException(
+            $"Relation '{t.Name}' is not marked Union — call MarkUnion<{t.Name}>() first.");
+
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void IsAToFinal(uint targetId)
         => throw new InvalidOperationException($"Cannot IsA to entity #{targetId} marked Final.");
 

@@ -116,7 +116,7 @@ def gen_row_enum(n):
 
     ctor_toggle = "\n            || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
     ctor_sparse = "\n            || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
-    ctor_check = ctor_toggle + "\n            || " + ctor_sparse
+    ctor_check = ctor_toggle + "\n            || " + ctor_sparse + "\n            || q.HasUnionWith"
     stride_init = " ".join(f"_stride{i} = 1;" for i in range(1, n + 1))
 
     component_props = "\n".join(
@@ -175,6 +175,7 @@ public ref struct {R}
     internal RowEnumerator({Q} q)
     {{
         _query = q;
+        q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || {ctor_check};
         _filter = _hasFilter ? {F}.Rent() : null;
@@ -226,6 +227,7 @@ public ref struct {R}
         while (_rowIdx < _count)
         {{
             uint entId = f.CurTable!.Entities[_rowIdx].Id;
+            if (_query.HasUnionWith && !_query.MatchesUnionWith(entId)) {{ _rowIdx++; continue; }}
 {bitset_skips}
 {filter_assigns}
             return true;

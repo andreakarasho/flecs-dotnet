@@ -49,6 +49,41 @@ public abstract class QueryBase
     // Updated by SetInherited / SetTermTraversal / SetCascade.
     internal bool _anyInheritance;
 
+    // Subset of `_with` whose ids are Union pairs (relation marked Union).
+    // Computed lazily via EnsureUnionWith. Union pairs don't gate archetype
+    // match — RowEnumerator filter path checks per-row HasTarget here.
+    internal Id[]? _unionWith;
+    internal bool HasUnionWith => _unionWith is { Length: > 0 };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void EnsureUnionWith()
+    {
+        if (_unionWith != null) return;
+        List<Id>? list = null;
+        for (int i = 0; i < _with.Length; i++)
+        {
+            var id = _with[i];
+            if (id.IsPair && _world.IsUnionRel(id.Relation))
+                (list ??= new List<Id>()).Add(id);
+        }
+        _unionWith = list?.ToArray() ?? Array.Empty<Id>();
+    }
+
+    // Per-row Union pair gate. Caller already verified HasUnionWith. Returns
+    // true if every Union with-pair matches the entity's current target.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool MatchesUnionWith(uint entId)
+    {
+        var u = _unionWith!;
+        for (int i = 0; i < u.Length; i++)
+        {
+            var pair = u[i];
+            if (!_world._unionStorage[pair.Relation].HasTarget(entId, pair.Target))
+                return false;
+        }
+        return true;
+    }
+
     // Read-only term ids. Default: every term in `_with` is a writer; ids
     // here override to read-only. Used by the pipeline DAG to detect r/w
     // conflicts between concurrent systems. Mirrors flecs term inout=In.
@@ -88,7 +123,7 @@ public abstract class QueryBase
 
     protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
-    protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); }
+    protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); _unionWith = null; }
 
     protected void AddWith(Id id) { _with = QueryUtil.AppendSorted(_with, id); Reset(); }
     protected void AddWithout(Id id) { _without = QueryUtil.AppendSorted(_without, id); Reset(); }
@@ -242,6 +277,9 @@ internal static class QueryUtil
             // SparseStorage<T> outside the archetype. Per-row Has check
             // happens during iteration (RowEnumerator filter path).
             if (worldForSparse != null && worldForSparse.IsSparseId(with[i])) continue;
+            // Union pair terms are also non-fragmenting — relation never
+            // enters archetype. Per-row HasTarget gates iteration.
+            if (worldForSparse != null && with[i].IsPair && worldForSparse.IsUnionRel(with[i].Relation)) continue;
             if (!MatchesIdOrInherited(t, with[i], wildcard, worldForInherit, inheritedDefault, termTraversals))
                 return false;
         }
