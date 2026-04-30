@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
-"""Generate Query<T1..TN> + RowEnumerator<T1..TN> + FilterState<T1..TN> for arities 7..16."""
+"""Generate Query<T1..TN> + RowEnumerator<T1..TN> + FilterState<T1..TN> for arities 1..16.
 
-ARITIES = list(range(7, 17))
+Single source of truth for all query arities. Hand-edit the template here
+then run `python gen_arity.py` to refresh src/Query.Arity.cs. Optional<T>
+support exists only for arities 1-3 (matches the original hand-written
+forms; higher arities omit it for symmetry / less codegen weight)."""
+
+ARITIES = list(range(1, 17))
+OPTIONAL_MAX_ARITY = 3   # _t{i}Optional fields + Optional<T> method only for n <= this
+
 
 def t_list(n):
     return ", ".join(f"T{i}" for i in range(1, n + 1))
 
+
 def t_constraints(n):
     return " ".join(f"where T{i} : struct" for i in range(1, n + 1))
+
+
+def has_optional(n):
+    return n <= OPTIONAL_MAX_ARITY
+
 
 def gen_filterstate(n):
     cols = " ".join(f"public Column<T{i}>? Col{i};" for i in range(1, n + 1))
@@ -43,14 +56,52 @@ internal sealed class {cls}
 }}
 """
 
+
+def gen_optional_block(n, Q):
+    """Emit Optional<T> method + _t{i}Optional fields for arities <= OPTIONAL_MAX_ARITY."""
+    if not has_optional(n):
+        return "", ""
+
+    fields = "    internal bool " + ", ".join(f"_t{i}Optional" for i in range(1, n + 1)) + ";"
+
+    if n == 1:
+        names = '"T1"'
+    elif n == 2:
+        names = '"T1 or T2"'
+    else:
+        names = '"T1, T2, or T3"'
+
+    branches = []
+    for i in range(1, n + 1):
+        branches.append(
+            f"        if (typeof(T) == typeof(T{i})) "
+            f"{{ if (!_t{i}Optional) {{ _t{i}Optional = true; _with = QueryUtil.Remove(_with, _c{i}); Reset(); }} return this; }}"
+        )
+    body = "\n".join(branches)
+
+    method = f"""
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public {Q} Optional<T>() where T : struct
+    {{
+{body}
+        ThrowHelper.OptionalTypeMismatch(typeof(T), {names});
+        return this;
+    }}
+"""
+    return fields, method
+
+
 def gen_query(n):
     Q = f"Query<{t_list(n)}>"
     cs = ", ".join(f"_c{i}" for i in range(1, n + 1))
+    optional_fields, optional_method = gen_optional_block(n, Q)
     return f"""
 public sealed class {Q} : QueryBase
     {t_constraints(n)}
 {{
     internal readonly Id {cs};
+{optional_fields}
 
     private static Id[] BuildWith(World w)
     {{
@@ -76,7 +127,7 @@ public sealed class {Q} : QueryBase
     {{ AddOr(new[] {{ _world.IdOf<TA>(), _world.IdOf<TB>() }}); return this; }}
     public {Q} Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     {{ AddOr(new[] {{ _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }}); return this; }}
-
+{optional_method}
     public {Q} Inherited() {{ SetInherited(); return this; }}
     public {Q} Read<T>() where T : struct {{ MarkRead(_world.IdOf<T>()); return this; }}
 
@@ -107,22 +158,26 @@ public sealed class {Q} : QueryBase
 }}
 """
 
+
 def gen_row_enum(n):
     R = f"RowEnumerator<{t_list(n)}>"
     F = f"FilterState<{t_list(n)}>"
     Q = f"Query<{t_list(n)}>"
     ptrs = "\n".join(f"    private Ptr<T{i}> _ptr{i};" for i in range(1, n + 1))
-    # _stride field removed — IsShared{N} reads _filter.Shared{N} >= 0
-    strides = None
 
     toggle_ors = " || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
     sparse_ors = " || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
+
+    optional_clause = ""
+    if has_optional(n):
+        optional_clause = " || " + " || ".join(f"q._t{i}Optional" for i in range(1, n + 1))
+
     ctor_check = (
-        f"(q._world._anyCanToggle && ({toggle_ors}))\n"
+        f"q._anyInheritance{optional_clause}\n"
+        f"            || (q._world._anyCanToggle && ({toggle_ors}))\n"
         f"            || (q._world._anySparse && ({sparse_ors}))\n"
         f"            || (q._world._anyUnion && q.HasUnionWith)"
     )
-    stride_init = ""
 
     component_props = "\n".join(
         f'    public Ptr<T{i}> Component{i} {{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _ptr{i}; }}'
@@ -137,11 +192,9 @@ def gen_row_enum(n):
     fast_advance = "\n".join(
         f"                _ptr{i}.Value = ref Unsafe.Add(ref _ptr{i}.Value, 1);" for i in range(1, n + 1))
 
-    # Filter-path per-term skip: prefer sparse-Has when sparse, else bitset.
     bitset_skips = "\n".join(
         f"            if (f.Sparse{i} != null) {{ if (!f.Sparse{i}.Has(entId)) {{ _rowIdx++; continue; }} }} else if (f.Bs{i} != null && !f.Bs{i}.Get(_rowIdx)) {{ _rowIdx++; continue; }}"
         for i in range(1, n + 1))
-    # Filter-path per-term ptr resolve: sparse GetRef vs Column Resolve.
     filter_assigns = "\n".join(
         f"            if (f.Sparse{i} != null) _ptr{i}.Value = ref f.Sparse{i}.GetRef(entId); else _ptr{i}.Value = ref RowEnumeratorUtil.Resolve(f.Col{i}, f.Shared{i}, _rowIdx);"
         for i in range(1, n + 1))
@@ -153,13 +206,19 @@ def gen_row_enum(n):
         f"                _ptr{i}.Value = ref MemoryMarshal.GetReference(c{i}.AsSpan());"
         for i in range(1, n + 1))
 
-    # Per-term per-table setup: sparse → cache SparseStorage; archetype →
-    # Resolve column + bitset. Skip table when archetype term missing.
     setup_lines = []
     for i in range(1, n + 1):
+        # Optional terms keep matching even when the archetype lacks the column
+        # (sparse path always matches if entity has dict entry; dense optional
+        # leaves Col null and AdvanceFiltered yields NullRef via Resolve).
+        miss_check = (
+            f"if (c == null && !_query._t{i}Optional) skip = true;"
+            if has_optional(n) else
+            "if (c == null) skip = true;"
+        )
         setup_lines.append(
             f"            if (w.IsSparseId(_query._c{i})) {{ f.Sparse{i} = (SparseStorage<T{i}>)w._sparseStorage[_query._c{i}.Component]; f.Col{i} = null; f.Shared{i} = -1; f.Bs{i} = null; }}\n"
-            f"            else {{ f.Sparse{i} = null; var (c, s) = _query.ResolveSource<T{i}>(t, _query._c{i}); if (c == null) skip = true; else {{ f.Col{i} = c; f.Shared{i} = s; f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s); }} }}\n"
+            f"            else {{ f.Sparse{i} = null; var (c, s) = _query.ResolveSource<T{i}>(t, _query._c{i}); {miss_check} else {{ f.Col{i} = c; f.Shared{i} = s; f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s); }} }}\n"
             f"            if (skip) continue;")
     per_term_setup = "\n".join(setup_lines)
 
@@ -182,8 +241,7 @@ public ref struct {R}
     {{
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
-            || {ctor_check};
+        _hasFilter = {ctor_check};
         _filter = _hasFilter ? {F}.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -285,6 +343,7 @@ public ref struct {R}
 }}
 """
 
+
 def gen_world_factories():
     lines = []
     for n in ARITIES:
@@ -293,12 +352,12 @@ def gen_world_factories():
         lines.append(f"    public Query<{ts}> Query<{ts}>() {cons} => new(this);")
     return "\n".join(lines)
 
+
 def main():
     out = []
     out.append("""// Auto-generated by gen_arity.py — Query<T1..TN> + RowEnumerator + FilterState
-// for arities 7..16. Re-generate via `python gen_arity.py` after editing the
-// template; do not hand-edit. Mirrors the arity-1..6 forms in Iteration.cs /
-// Query.cs (no Optional support — same as arity 4..6).
+// for arities 1..16. Re-generate via `python gen_arity.py` after editing the
+// template; do not hand-edit. Single source of truth for all arities.
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -313,10 +372,9 @@ namespace Flecs;
     with open("src/Query.Arity.cs", "w", encoding="utf-8") as f:
         f.write("\n".join(out))
     print("Wrote src/Query.Arity.cs")
-
-    # Print World factory snippet for manual paste
     print("---- World factory snippet ----")
     print(gen_world_factories())
+
 
 if __name__ == "__main__":
     main()

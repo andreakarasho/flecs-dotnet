@@ -263,6 +263,21 @@ public sealed partial class World
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal IdHooks? GetIdHooksRaw(Id id) => GetIdHooks(id);
 
+    // Sparse-trait dispatch helper. True when the component id is opted into
+    // sparse storage; out-param hands back the typed storage so callers can
+    // skip the cast at every callsite (Set/Get/Has/Owns/TryGet/Remove).
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryGetSparse<T>(EntityId compEnt, out SparseStorage<T> storage) where T : struct
+    {
+        if (_sparseIds.Contains(compEnt.Id))
+        {
+            storage = (SparseStorage<T>)_sparseStorage[compEnt.Id];
+            return true;
+        }
+        storage = null!;
+        return false;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal object? GetTypeHooksRaw(Id compId)
         => _componentInfo.TryGetValue(compId, out var info) ? info.Hooks : null;
@@ -570,9 +585,9 @@ public sealed partial class World
             var compEnt = GetOrRegisterComponentLocked<T>();
             var compId = (Id)compEnt;
             // Sparse path — bypass archetype, route through SparseStorage<T>.
-            if (_sparseIds.Contains(compEnt.Id))
+            if (TryGetSparse<T>(compEnt, out var sparse))
             {
-                SetSparseLocked(entity, compId, value);
+                SetSparseLocked(entity, compId, value, sparse);
                 return;
             }
             EnsureHasIdLocked(entity, compEnt);
@@ -589,9 +604,8 @@ public sealed partial class World
 
     // Sparse Set — value lives in SparseStorage<T>. Fires OnAdd+Ctor on first
     // set, OnSet always. Mirrors archetype-Set hook ordering.
-    private void SetSparseLocked<T>(EntityId entity, Id compId, T value) where T : struct
+    private void SetSparseLocked<T>(EntityId entity, Id compId, T value, SparseStorage<T> storage) where T : struct
     {
-        var storage = (SparseStorage<T>)_sparseStorage[compId.Component];
         var info = _componentInfo[compId];
         var hooks = info.Hooks as TypeHooks<T>;
         bool wasNew = !storage.Has(entity.Id);
@@ -621,10 +635,9 @@ public sealed partial class World
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) ThrowHelper.ComponentNotRegistered(typeof(T));
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) ThrowHelper.IsTagNotComponent(typeof(T));
-        if (_sparseIds.Contains(compEnt.Id))
+        if (TryGetSparse<T>(compEnt, out var sparse))
         {
-            var s = (SparseStorage<T>)_sparseStorage[compEnt.Id];
-            ref var v = ref s.GetRef(entity.Id);
+            ref var v = ref sparse.GetRef(entity.Id);
             if (Unsafe.IsNullRef(ref v)) ThrowHelper.EntityMissingComponent(typeof(T));
             return ref v;
         }
@@ -646,11 +659,10 @@ public sealed partial class World
         { value = default; return false; }
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) { value = default; return false; }
-        if (_sparseIds.Contains(compEnt.Id))
+        if (TryGetSparse<T>(compEnt, out var sparse))
         {
-            var s = (SparseStorage<T>)_sparseStorage[compEnt.Id];
-            if (!s.Has(entity.Id)) { value = default; return false; }
-            value = s.GetRef(entity.Id);
+            if (!sparse.Has(entity.Id)) { value = default; return false; }
+            value = sparse.GetRef(entity.Id);
             return true;
         }
         var table = _tablesById[rec.TableId]!;
@@ -679,8 +691,8 @@ public sealed partial class World
             return ref Unsafe.NullRef<T>();
         var compId = (Id)compEnt;
         if (!_componentInfo.ContainsKey(compId)) return ref Unsafe.NullRef<T>();
-        if (_sparseIds.Contains(compEnt.Id))
-            return ref ((SparseStorage<T>)_sparseStorage[compEnt.Id]).GetRef(entity.Id);
+        if (TryGetSparse<T>(compEnt, out var sparse))
+            return ref sparse.GetRef(entity.Id);
         var table = _tablesById[rec.TableId]!;
         if (table.Has(compId))
             return ref ((Column<T>)table.Columns[table.IndexOf(compId)]!).GetRef(rec.Row);
@@ -698,8 +710,8 @@ public sealed partial class World
     {
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
-        if (_sparseIds.Contains(compEnt.Id))
-            return ((SparseStorage<T>)_sparseStorage[compEnt.Id]).Has(entity.Id);
+        if (TryGetSparse<T>(compEnt, out var sparse))
+            return sparse.Has(entity.Id);
         ref var rec = ref GetSlot(entity.Id);
         var compId = (Id)compEnt;
         if (_tablesById[rec.TableId]!.Has(compId)) return true;
@@ -739,8 +751,8 @@ public sealed partial class World
     {
         if (!IsAlive(entity)) return false;
         if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return false;
-        if (_sparseIds.Contains(compEnt.Id))
-            return ((SparseStorage<T>)_sparseStorage[compEnt.Id]).Has(entity.Id);
+        if (TryGetSparse<T>(compEnt, out var sparse))
+            return sparse.Has(entity.Id);
         ref var rec = ref GetSlot(entity.Id);
         return _tablesById[rec.TableId]!.Has((Id)compEnt);
     }
@@ -863,9 +875,9 @@ public sealed partial class World
         {
             if (!_typeToEntity.TryGetValue(typeof(T), out var compEnt)) return;
             if (ShouldQueueLocked()) { _commands.Add(RemoveIdCmd.Rent(entity, (Id)compEnt)); return; }
-            if (_sparseIds.Contains(compEnt.Id))
+            if (TryGetSparse<T>(compEnt, out var sparse))
             {
-                RemoveSparseLocked<T>(entity, (Id)compEnt);
+                RemoveSparseLocked<T>(entity, (Id)compEnt, sparse);
                 return;
             }
             RemoveIdLocked(entity, (Id)compEnt);
@@ -873,9 +885,8 @@ public sealed partial class World
     }
 
     // Sparse Remove — fires OnRemove + Dtor before clearing the dense slot.
-    private void RemoveSparseLocked<T>(EntityId entity, Id compId) where T : struct
+    private void RemoveSparseLocked<T>(EntityId entity, Id compId, SparseStorage<T> storage) where T : struct
     {
-        var storage = (SparseStorage<T>)_sparseStorage[compId.Component];
         if (!storage.Has(entity.Id)) return;
         var hooks = _componentInfo[compId].Hooks as TypeHooks<T>;
         ref var slot = ref storage.GetRef(entity.Id);
