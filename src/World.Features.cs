@@ -795,7 +795,10 @@ public sealed partial class World
         {
             var rel = GetOrRegisterAnyLocked<TR>();
             if (_unionRelIds.Add(rel.Id))
+            {
                 _unionStorage[rel.Id] = new UnionStorage(rel.Id);
+                _anyUnion = true;
+            }
         }
     }
 
@@ -804,7 +807,10 @@ public sealed partial class World
         lock (_lock)
         {
             if (_unionRelIds.Add(relation.Id))
+            {
                 _unionStorage[relation.Id] = new UnionStorage(relation.Id);
+                _anyUnion = true;
+            }
         }
     }
 

@@ -228,11 +228,11 @@ public ref struct RowEnumerator<T1> where T1 : struct
     internal RowEnumerator(Query<T1> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional
             || q._world.IsCanToggleId(q._c1)
             || q._world.IsSparseId(q._c1)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -368,11 +368,11 @@ public ref struct RowEnumerator<T1, T2>
     internal RowEnumerator(Query<T1, T2> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -530,13 +530,13 @@ public ref struct RowEnumerator<T1, T2, T3>
     internal RowEnumerator(Query<T1, T2, T3> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -708,13 +708,13 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     internal RowEnumerator(Query<T1, T2, T3, T4> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -871,7 +871,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     internal RowEnumerator(Query<T1, T2, T3, T4, T5> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
@@ -879,7 +879,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
             || q._world.IsSparseId(q._c5)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();
@@ -1044,7 +1044,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     internal RowEnumerator(Query<T1, T2, T3, T4, T5, T6> q)
     {
         _query = q;
-        q.EnsureUnionWith();
+        if (q._world._anyUnion) q.EnsureUnionWith();
         _hasFilter = q._anyInheritance
             || q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2)
             || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)
@@ -1052,7 +1052,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
             || q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2)
             || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)
             || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6)
-            || q.HasUnionWith;
+            || (q._world._anyUnion && q.HasUnionWith);
         _filter = _hasFilter ? FilterState<T1, T2, T3, T4, T5, T6>.Rent() : null;
         _defer = q._world.Readonly();
         q.Rematch();

@@ -177,6 +177,11 @@ public sealed partial class World
     // target switch). Mirrors flecs Union trait.
     internal readonly HashSet<uint> _unionRelIds = new();
     internal readonly Dictionary<uint, UnionStorage> _unionStorage = new();
+    // Hot-path skip: ctor of every RowEnumerator probes for union with-pairs;
+    // when the world has never seen MarkUnion, that probe is wasted work.
+    // Set to true on first MarkUnion. Mirrors the same trick used elsewhere
+    // (e.g. observer dict bypass in DispatchMultiObsLocked).
+    internal bool _anyUnion;
 
     public World()
     {

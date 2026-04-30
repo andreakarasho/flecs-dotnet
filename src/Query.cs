@@ -69,12 +69,14 @@ public abstract class QueryBase
         _unionWith = list?.ToArray() ?? Array.Empty<Id>();
     }
 
-    // Per-row Union pair gate. Caller already verified HasUnionWith. Returns
-    // true if every Union with-pair matches the entity's current target.
+    // Per-row Union pair gate. Returns true when there are no Union with-pairs
+    // (caller's call gets inlined to a single null/length check + return),
+    // OR when every Union with-pair matches the entity's current target.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool MatchesUnionWith(uint entId)
     {
-        var u = _unionWith!;
+        var u = _unionWith;
+        if (u is null || u.Length == 0) return true;
         for (int i = 0; i < u.Length; i++)
         {
             var pair = u[i];
