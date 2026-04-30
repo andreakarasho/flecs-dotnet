@@ -221,7 +221,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
     private int _count;
     private bool _disposed;
     private Ptr<T1> _ptr1;
-    private int _stride1;
     private FilterState<T1>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -240,7 +239,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1;
     }
 
     public Ptr<T1> Component1
@@ -253,7 +251,7 @@ public ref struct RowEnumerator<T1> where T1 : struct
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
 
     public RowEnumerator<T1> Current
     {
@@ -318,7 +316,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
             {
                 f.Sparse1 = (SparseStorage<T1>)_query._world._sparseStorage[_query._c1.Component];
                 f.Col1 = null; f.Shared1 = -1; f.Bs1 = null;
-                _stride1 = 0;
             }
             else
             {
@@ -326,7 +323,6 @@ public ref struct RowEnumerator<T1> where T1 : struct
                 var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
                 if (col1 == null && !_query._t1Optional) continue;
                 f.Col1 = col1; f.Shared1 = s1;
-                _stride1 = (s1 < 0 && col1 != null) ? 1 : 0;
                 f.Bs1 = _query.ResolveBitset(t, _query._c1, s1);
             }
             _count = n;
@@ -361,7 +357,6 @@ public ref struct RowEnumerator<T1, T2>
     private bool _disposed;
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
-    private int _stride1, _stride2;
     private FilterState<T1, T2>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -380,7 +375,6 @@ public ref struct RowEnumerator<T1, T2>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1;
     }
 
     public RowEnumerator<T1, T2> Current
@@ -396,8 +390,8 @@ public ref struct RowEnumerator<T1, T2>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
+    public bool IsShared2 => _filter is { Shared2: >= 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b) { a = _ptr1; b = _ptr2; }
@@ -467,27 +461,27 @@ public ref struct RowEnumerator<T1, T2>
             if (w.IsSparseId(_query._c1))
             {
                 f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component];
-                f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0;
+                f.Col1 = null; f.Shared1 = -1; f.Bs1 = null;
             }
             else
             {
                 f.Sparse1 = null;
                 var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
                 if (col1 == null && !_query._t1Optional) { skip = true; }
-                else { f.Col1 = col1; f.Shared1 = s1; _stride1 = (s1 < 0 && col1 != null) ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
+                else { f.Col1 = col1; f.Shared1 = s1; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
             }
             if (skip) continue;
             if (w.IsSparseId(_query._c2))
             {
                 f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component];
-                f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0;
+                f.Col2 = null; f.Shared2 = -1; f.Bs2 = null;
             }
             else
             {
                 f.Sparse2 = null;
                 var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
                 if (col2 == null && !_query._t2Optional) { skip = true; }
-                else { f.Col2 = col2; f.Shared2 = s2; _stride2 = (s2 < 0 && col2 != null) ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
+                else { f.Col2 = col2; f.Shared2 = s2; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
             }
             if (skip) continue;
             _count = n;
@@ -523,7 +517,6 @@ public ref struct RowEnumerator<T1, T2, T3>
     private Ptr<T1> _ptr1;
     private Ptr<T2> _ptr2;
     private Ptr<T3> _ptr3;
-    private int _stride1, _stride2, _stride3;
     private FilterState<T1, T2, T3>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -542,7 +535,6 @@ public ref struct RowEnumerator<T1, T2, T3>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1;
     }
 
     public RowEnumerator<T1, T2, T3> Current
@@ -558,9 +550,9 @@ public ref struct RowEnumerator<T1, T2, T3>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-    public bool IsShared3 => _stride3 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
+    public bool IsShared2 => _filter is { Shared2: >= 0 };
+    public bool IsShared3 => _filter is { Shared3: >= 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c)
@@ -636,33 +628,33 @@ public ref struct RowEnumerator<T1, T2, T3>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1))
-            { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
+            { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
             else
             {
                 f.Sparse1 = null;
                 var (col1, s1) = _query.ResolveSource<T1>(t, _query._c1);
                 if (col1 == null && !_query._t1Optional) skip = true;
-                else { f.Col1 = col1; f.Shared1 = s1; _stride1 = (s1 < 0 && col1 != null) ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
+                else { f.Col1 = col1; f.Shared1 = s1; f.Bs1 = _query.ResolveBitset(t, _query._c1, s1); }
             }
             if (skip) continue;
             if (w.IsSparseId(_query._c2))
-            { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
+            { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
             else
             {
                 f.Sparse2 = null;
                 var (col2, s2) = _query.ResolveSource<T2>(t, _query._c2);
                 if (col2 == null && !_query._t2Optional) skip = true;
-                else { f.Col2 = col2; f.Shared2 = s2; _stride2 = (s2 < 0 && col2 != null) ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
+                else { f.Col2 = col2; f.Shared2 = s2; f.Bs2 = _query.ResolveBitset(t, _query._c2, s2); }
             }
             if (skip) continue;
             if (w.IsSparseId(_query._c3))
-            { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
+            { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
             else
             {
                 f.Sparse3 = null;
                 var (col3, s3) = _query.ResolveSource<T3>(t, _query._c3);
                 if (col3 == null && !_query._t3Optional) skip = true;
-                else { f.Col3 = col3; f.Shared3 = s3; _stride3 = (s3 < 0 && col3 != null) ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s3); }
+                else { f.Col3 = col3; f.Shared3 = s3; f.Bs3 = _query.ResolveBitset(t, _query._c3, s3); }
             }
             if (skip) continue;
             _count = n;
@@ -699,7 +691,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     private Ptr<T2> _ptr2;
     private Ptr<T3> _ptr3;
     private Ptr<T4> _ptr4;
-    private int _stride1, _stride2, _stride3, _stride4;
     private FilterState<T1, T2, T3, T4>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -720,7 +711,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1; _stride4 = 1;
     }
 
     public RowEnumerator<T1, T2, T3, T4> Current
@@ -737,10 +727,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-    public bool IsShared3 => _stride3 == 0;
-    public bool IsShared4 => _stride4 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
+    public bool IsShared2 => _filter is { Shared2: >= 0 };
+    public bool IsShared3 => _filter is { Shared3: >= 0 };
+    public bool IsShared4 => _filter is { Shared4: >= 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c, out Ptr<T4> d)
@@ -818,17 +808,17 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
             var f = _filter!;
             f.CurTable = t;
             bool skip = false;
-            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -862,7 +852,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     private bool _disposed;
     private Ptr<T1> _ptr1; private Ptr<T2> _ptr2; private Ptr<T3> _ptr3;
     private Ptr<T4> _ptr4; private Ptr<T5> _ptr5;
-    private int _stride1, _stride2, _stride3, _stride4, _stride5;
     private FilterState<T1, T2, T3, T4, T5>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -883,7 +872,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1; _stride4 = 1; _stride5 = 1;
     }
 
     public RowEnumerator<T1, T2, T3, T4, T5> Current
@@ -901,11 +889,11 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-    public bool IsShared3 => _stride3 == 0;
-    public bool IsShared4 => _stride4 == 0;
-    public bool IsShared5 => _stride5 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
+    public bool IsShared2 => _filter is { Shared2: >= 0 };
+    public bool IsShared3 => _filter is { Shared3: >= 0 };
+    public bool IsShared4 => _filter is { Shared4: >= 0 };
+    public bool IsShared5 => _filter is { Shared5: >= 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c,
@@ -985,20 +973,20 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
             var f = _filter!;
             f.CurTable = t;
             bool skip = false;
-            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; _stride5 = 0; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; _stride5 = s < 0 ? 1 : 0; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -1033,7 +1021,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     private bool _disposed;
     private Ptr<T1> _ptr1; private Ptr<T2> _ptr2; private Ptr<T3> _ptr3;
     private Ptr<T4> _ptr4; private Ptr<T5> _ptr5; private Ptr<T6> _ptr6;
-    private int _stride1, _stride2, _stride3, _stride4, _stride5, _stride6;
     private FilterState<T1, T2, T3, T4, T5, T6>? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1056,7 +1043,6 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        _stride1 = 1; _stride2 = 1; _stride3 = 1; _stride4 = 1; _stride5 = 1; _stride6 = 1;
     }
 
     public RowEnumerator<T1, T2, T3, T4, T5, T6> Current
@@ -1075,12 +1061,12 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];
     }
-    public bool IsShared1 => _stride1 == 0;
-    public bool IsShared2 => _stride2 == 0;
-    public bool IsShared3 => _stride3 == 0;
-    public bool IsShared4 => _stride4 == 0;
-    public bool IsShared5 => _stride5 == 0;
-    public bool IsShared6 => _stride6 == 0;
+    public bool IsShared1 => _filter is { Shared1: >= 0 };
+    public bool IsShared2 => _filter is { Shared2: >= 0 };
+    public bool IsShared3 => _filter is { Shared3: >= 0 };
+    public bool IsShared4 => _filter is { Shared4: >= 0 };
+    public bool IsShared5 => _filter is { Shared5: >= 0 };
+    public bool IsShared6 => _filter is { Shared6: >= 0 };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> a, out Ptr<T2> b, out Ptr<T3> c,
@@ -1165,23 +1151,23 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
             var f = _filter!;
             f.CurTable = t;
             bool skip = false;
-            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; _stride1 = 0; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; _stride1 = s < 0 ? 1 : 0; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; _stride2 = 0; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; _stride2 = s < 0 ? 1 : 0; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; _stride3 = 0; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; _stride3 = s < 0 ? 1 : 0; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; _stride4 = 0; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; _stride4 = s < 0 ? 1 : 0; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; _stride5 = 0; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; _stride5 = s < 0 ? 1 : 0; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
-            if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; _stride6 = 0; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; _stride6 = s < 0 ? 1 : 0; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;

@@ -112,7 +112,8 @@ def gen_row_enum(n):
     F = f"FilterState<{t_list(n)}>"
     Q = f"Query<{t_list(n)}>"
     ptrs = "\n".join(f"    private Ptr<T{i}> _ptr{i};" for i in range(1, n + 1))
-    strides = ", ".join(f"_stride{i}" for i in range(1, n + 1))
+    # _stride field removed — IsShared{N} reads _filter.Shared{N} >= 0
+    strides = None
 
     toggle_ors = " || ".join(f"q._world.IsCanToggleId(q._c{i})" for i in range(1, n + 1))
     sparse_ors = " || ".join(f"q._world.IsSparseId(q._c{i})" for i in range(1, n + 1))
@@ -121,12 +122,14 @@ def gen_row_enum(n):
         f"            || (q._world._anySparse && ({sparse_ors}))\n"
         f"            || (q._world._anyUnion && q.HasUnionWith)"
     )
-    stride_init = " ".join(f"_stride{i} = 1;" for i in range(1, n + 1))
+    stride_init = ""
 
     component_props = "\n".join(
         f'    public Ptr<T{i}> Component{i} {{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _ptr{i}; }}'
         for i in range(1, n + 1))
-    isshared_props = "\n".join(f"    public bool IsShared{i} => _stride{i} == 0;" for i in range(1, n + 1))
+    isshared_props = "\n".join(
+        f"    public bool IsShared{i} => _filter is {{ Shared{i}: >= 0 }};"
+        for i in range(1, n + 1))
 
     deconstruct_args = ", ".join(f"out Ptr<T{i}> p{i}" for i in range(1, n + 1))
     deconstruct_body = " ".join(f"p{i} = _ptr{i};" for i in range(1, n + 1))
@@ -155,8 +158,8 @@ def gen_row_enum(n):
     setup_lines = []
     for i in range(1, n + 1):
         setup_lines.append(
-            f"            if (w.IsSparseId(_query._c{i})) {{ f.Sparse{i} = (SparseStorage<T{i}>)w._sparseStorage[_query._c{i}.Component]; f.Col{i} = null; f.Shared{i} = -1; f.Bs{i} = null; _stride{i} = 0; }}\n"
-            f"            else {{ f.Sparse{i} = null; var (c, s) = _query.ResolveSource<T{i}>(t, _query._c{i}); if (c == null) skip = true; else {{ f.Col{i} = c; f.Shared{i} = s; _stride{i} = s < 0 ? 1 : 0; f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s); }} }}\n"
+            f"            if (w.IsSparseId(_query._c{i})) {{ f.Sparse{i} = (SparseStorage<T{i}>)w._sparseStorage[_query._c{i}.Component]; f.Col{i} = null; f.Shared{i} = -1; f.Bs{i} = null; }}\n"
+            f"            else {{ f.Sparse{i} = null; var (c, s) = _query.ResolveSource<T{i}>(t, _query._c{i}); if (c == null) skip = true; else {{ f.Col{i} = c; f.Shared{i} = s; f.Bs{i} = _query.ResolveBitset(t, _query._c{i}, s); }} }}\n"
             f"            if (skip) continue;")
     per_term_setup = "\n".join(setup_lines)
 
@@ -172,7 +175,6 @@ public ref struct {R}
     private int _count;
     private bool _disposed;
 {ptrs}
-    private int {strides};
     private {F}? _filter;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -189,7 +191,6 @@ public ref struct {R}
         _rowIdx = -1;
         _count = 0;
         _disposed = false;
-        {stride_init}
     }}
 
     public {R} Current
