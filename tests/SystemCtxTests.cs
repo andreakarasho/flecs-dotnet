@@ -15,8 +15,7 @@ public class SystemCtxTests
         {
             var gs = it.Ctx<GameState>();
             gs.Score++;
-        });
-        s.Ctx = state;
+        }).SetCtx(state);
         w.Progress(0f);
         w.Progress(0f);
         Assert.Equal(44, state.Score);

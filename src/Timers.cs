@@ -6,7 +6,7 @@ namespace Flecs;
 //
 //   var slow = world.Timer(0.5f);              // ticks every 0.5s
 //   var rare = world.Rate(slow, 4);            // ticks every 4th slow-tick
-//   world.System("AI", world.OnUpdate, action).TickSource = rare;
+//   world.System("AI", world.OnUpdate, action).SetTickSource(rare);
 //
 // Timer/RateFilter live as data on regular entities (one of each per source);
 // TickSource carries the per-frame state. Progress evaluates timers first,

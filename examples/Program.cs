@@ -41,7 +41,6 @@ class Program
         CreateEntities(ww, 1000);
         SetPosVel(ww, 1000);
         
-        var p = ww.Component<Position>();
         var query = ww.Query<Position, Velocity>();
         ww.System("ciao", ww.OnUpdate, it =>
         {
@@ -53,6 +52,8 @@ class Program
             }
             
         }).SetCtx((1, "asd", query));
+
+        var info = ww.GetInfo();
         
         while (true) 
             ww.Progress(0f);

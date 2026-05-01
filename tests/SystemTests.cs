@@ -44,8 +44,7 @@ public class SystemTests
     {
         var w = new World();
         int calls = 0;
-        var s = w.System("s", w.OnUpdate, _ => calls++);
-        s.Enabled = false;
+        w.System("s", w.OnUpdate, _ => calls++).SetEnabled(false);
         w.Progress(0);
         Assert.Equal(0, calls);
     }

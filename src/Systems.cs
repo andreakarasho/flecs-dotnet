@@ -19,7 +19,7 @@ public delegate void SystemAction(Iter iter);
 // SystemHandle, and the frame's delta time. Mirrors flecs.NET `Iter` (the
 // shape of ecs_iter_t-wrapper passed into system callbacks). Keeps system
 // identity explicit instead of stashing it in ThreadStatic state.
-public readonly struct Iter
+public readonly ref struct Iter
 {
     public World World { get; }
     public SystemHandle System { get; }
@@ -48,39 +48,45 @@ public sealed class SystemHandle
 {
     public string Name { get; }
     public EntityId Phase { get; internal set; }
-    public SystemAction Action { get; internal set; }
-    public bool Enabled { get; set; } = true;
     // Backing entity. Tagged with the reserved System id; user can add custom
     // tags to opt the system in/out of pipeline filters. Pipeline matching
     // checks (withIds present AND withoutIds absent) on this entity.
     public EntityId Entity { get; internal set; }
-    // R/W component-id sets used by the pipeline DAG. Default empty (treated
-    // as "writes anything" — pessimistic, forces serialization). System<T...>
-    // sugar populates WriteIds from typed args; user can swap via SetReads /
-    // SetWrites on the handle. Pure read-only systems (no writes) can run
-    // concurrent with anything.
-    public Id[] ReadIds { get; private set; } = Array.Empty<Id>();
-    public Id[] WriteIds { get; private set; } = Array.Empty<Id>();
+    public bool Enabled { get; private set; } = true;
     // True when caller asserts the action is safe to run concurrently with
     // other ParallelSafe systems whose r/w sets don't conflict. Default false:
     // unknown side effects → serialize. System<T...> sugar sets this true.
-    public bool ParallelSafe { get; internal set; }
+    public bool ParallelSafe { get; private set; }
     // Optional tick source — system runs only on Progress calls where the
     // bound source's TickSource.Tick is true. Default 0 = run every Progress.
     // Sources are timers (world.Timer) or rate filters (world.Rate).
-    public EntityId TickSource { get; set; }
+    public EntityId TickSource { get; private set; }
     // Optional user context. Stashed alongside the handle; readable inside
     // the system body via Iter.System.Ctx or iter.Ctx<T>().
     // Mirrors flecs ecs_system_desc_t.ctx.
-    public object? Ctx { get; set; }
+    public object? Ctx { get; private set; }
+
+    // Pipeline-internal plumbing: Action delegate plus r/w component-id sets
+    // used by the DAG. Default empty (treated as "writes anything" —
+    // pessimistic, forces serialization). System<T...> sugar populates
+    // WriteIds from typed args; user can swap via SetReads / SetWrites.
+    internal SystemAction Action { get; set; }
+    internal Id[] ReadIds { get; private set; } = Array.Empty<Id>();
+    internal Id[] WriteIds { get; private set; } = Array.Empty<Id>();
 
     internal SystemHandle(string name, EntityId phase, SystemAction action)
     { Name = name; Phase = phase; Action = action; }
 
+    // Fluent setters — all return this for chain. Direct setters intentionally
+    // absent: a SystemHandle is configured at registration time, not mutated
+    // ad-hoc. The only field flecs typically mutates post-create is Ctx, which
+    // is exposed read-only here; SetCtx replaces it.
     public SystemHandle SetReads(params Id[] ids) { ReadIds = ids; return this; }
     public SystemHandle SetWrites(params Id[] ids) { WriteIds = ids; return this; }
     public SystemHandle SetParallelSafe(bool v = true) { ParallelSafe = v; return this; }
     public SystemHandle SetCtx(object? ctx) { Ctx = ctx; return this; }
+    public SystemHandle SetEnabled(bool v) { Enabled = v; return this; }
+    public SystemHandle SetTickSource(EntityId t) { TickSource = t; return this; }
 
     // Conflict: this writes to anything other reads or writes, or vice versa.
     internal bool ConflictsWith(SystemHandle other)
