@@ -113,6 +113,42 @@ public class CustomEventTests
         Assert.Equal(0, hits);
     }
 
+    public struct Click { }
+
+    [Fact]
+    public void Observer_TargetLess_FiresOnEmit()
+    {
+        var w = new World();
+        EntityId seen = default;
+        w.Observer<Click>(it => seen = it.Entity);
+        var widget = w.CreateEntity();
+        w.Emit<Click>(widget);
+        Assert.Equal(widget.Id, seen.Id);
+    }
+
+    [Fact]
+    public void Observer_TargetLess_PropagatesUpChain()
+    {
+        var w = new World();
+        var seen = new List<uint>();
+        w.Observer<Click>(it => seen.Add(it.Entity.Id));
+        var p = w.CreateEntity();
+        var c = w.CreateEntity();
+        w.SetParent(c, p);
+        w.Emit<Click>(c, w.ChildOf);
+        Assert.Equal(new[] { c.Id, p.Id }, seen);
+    }
+
+    [Fact]
+    public void Observer_TargetLess_DoesNotFireOnTargetedEmit()
+    {
+        var w = new World();
+        int hits = 0;
+        w.Observer<Click>(it => hits++);                 // target-less
+        w.Emit<Click, Position>(w.CreateEntity());       // targeted — different key
+        Assert.Equal(0, hits);
+    }
+
     [Fact]
     public void EventType_AutoRegistersAsTagStyleEntity()
     {

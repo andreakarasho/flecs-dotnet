@@ -407,6 +407,29 @@ public sealed partial class World
     //   world.Emit<OnHit, Health>(target);
     //   world.Emit<OnHit, Health>(target, world.ChildOf);  // bubble up
 
+    // Subscribe to TEvent with no target — fires when Emit<TEvent>(entity)
+    // hits any entity. Use case: "Click" / "Hover" style entity-scoped events
+    // where the event itself carries all the meaning. Dispatch key is
+    // (evtId, default Id); paired with the target-less Emit below.
+    public ObserverHandle Observer<TEvent>(EventAction action, bool yieldExisting = false)
+        where TEvent : struct
+    {
+        var handle = new ObserverHandle(Event.OnAdd);
+        EntityId evt;
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, Event.OnAdd));
+        };
+        lock (_lock)
+        {
+            evt = GetOrRegisterAnyLocked<TEvent>();
+            AddCustomObsLocked(evt, default, wrapper);
+        }
+        // yieldExisting requires a target id to enumerate holders — no-op here.
+        return handle;
+    }
+
     // Subscribe to (TEvent, T) — typed component or tag target. The Event slot
     // on the ObserverHandle is a placeholder (OnAdd) for custom-event observers;
     // user code should not rely on it.Event inside the body.
@@ -460,6 +483,24 @@ public sealed partial class World
         var key = (evt.Id, target);
         _customObs.TryGetValue(key, out var existing);
         _customObs[key] = existing + action;
+    }
+
+    // Emit TEvent on entity with no target — pairs with target-less
+    // Observer<TEvent>. Useful for entity-scoped events like Click, Hover.
+    public void Emit<TEvent>(EntityId entity, EntityId propagateRel = default)
+        where TEvent : struct
+    {
+        var key = typeof(TEvent);
+        uint evtId;
+        lock (_lock)
+        {
+            if (!_emitKeyCache0.TryGetValue(key, out evtId))
+            {
+                evtId = GetOrRegisterAnyLocked<TEvent>().Id;
+                _emitKeyCache0[key] = evtId;
+            }
+        }
+        EmitInternal(evtId, entity, default, propagateRel);
     }
 
     // Emit (TEvent, T) on entity. Optional propagateRel bubbles the event up

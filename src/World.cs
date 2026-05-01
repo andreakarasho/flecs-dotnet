@@ -157,6 +157,7 @@ public sealed partial class World
     // Per-(TEvent, T...) resolved (evtId, targetId) cache. Avoids dict lookups
     // + register calls on every Emit. Entries stable once written: registration
     // creates entities exactly once, ids never change.
+    private readonly Dictionary<Type, uint> _emitKeyCache0 = new();
     private readonly Dictionary<(Type, Type), (uint evtId, Id tgt)> _emitKeyCache1 = new();
     private readonly Dictionary<(Type, Type, Type), (uint evtId, Id tgt)> _emitKeyCache2 = new();
 
