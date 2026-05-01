@@ -14,7 +14,7 @@ public class PipelineCustomTests
     {
         var w = new World();
         int hits = 0;
-        w.System("a", w.OnUpdate, (W, dt) => hits++);
+        w.System("a", w.OnUpdate, _ => hits++);
         w.Progress(0f);
         Assert.Equal(1, hits);
     }
@@ -25,8 +25,8 @@ public class PipelineCustomTests
         var w = new World();
         var menuTag = (Id)w.Tag<MenuScene>();
         int menuHits = 0, gameHits = 0;
-        var sm = w.System("menu", w.OnUpdate, (W, dt) => menuHits++);
-        var sg = w.System("game", w.OnUpdate, (W, dt) => gameHits++);
+        var sm = w.System("menu", w.OnUpdate, _ => menuHits++);
+        var sg = w.System("game", w.OnUpdate, _ => gameHits++);
         w.Add(sm.Entity, menuTag);
         // sg untagged.
         var p = w.CreatePipeline().With(w.SystemTag).With<MenuScene>().Build();
@@ -42,8 +42,8 @@ public class PipelineCustomTests
         var w = new World();
         var menuTag = (Id)w.Tag<MenuScene>();
         int menuHits = 0, gameHits = 0;
-        var sm = w.System("menu", w.OnUpdate, (W, dt) => menuHits++);
-        var sg = w.System("game", w.OnUpdate, (W, dt) => gameHits++);
+        var sm = w.System("menu", w.OnUpdate, _ => menuHits++);
+        var sg = w.System("game", w.OnUpdate, _ => gameHits++);
         w.Add(sm.Entity, menuTag);
         var p = w.CreatePipeline().With(w.SystemTag).Without<MenuScene>().Build();
         w.SetPipeline(p);
@@ -57,8 +57,8 @@ public class PipelineCustomTests
     {
         var w = new World();
         int menuHits = 0, gameHits = 0;
-        var sm = w.System("m", w.OnUpdate, (W, dt) => menuHits++);
-        var sg = w.System("g", w.OnUpdate, (W, dt) => gameHits++);
+        var sm = w.System("m", w.OnUpdate, _ => menuHits++);
+        var sg = w.System("g", w.OnUpdate, _ => gameHits++);
         w.Add(sm.Entity, (Id)w.Tag<MenuScene>());
         w.Add(sg.Entity, (Id)w.Tag<GameScene>());
         var menuP = w.CreatePipeline().With<MenuScene>().Build();
@@ -78,8 +78,8 @@ public class PipelineCustomTests
     {
         var w = new World();
         int menuHits = 0, gameHits = 0;
-        var sm = w.System("m", w.OnUpdate, (W, dt) => menuHits++);
-        var sg = w.System("g", w.OnUpdate, (W, dt) => gameHits++);
+        var sm = w.System("m", w.OnUpdate, _ => menuHits++);
+        var sg = w.System("g", w.OnUpdate, _ => gameHits++);
         w.Add(sm.Entity, (Id)w.Tag<MenuScene>());
         var p = w.CreatePipeline().Without<MenuScene>().Build();
         w.SetPipeline(p);
@@ -105,7 +105,7 @@ public class PipelineCustomTests
     public void System_BackingEntityHasSystemTag()
     {
         var w = new World();
-        var s = w.System("x", w.OnUpdate, (W, dt) => { });
+        var s = w.System("x", w.OnUpdate, _ => { });
         Assert.True(s.Entity.IsValid);
         Assert.True(w.Has(s.Entity, (Id)w.SystemTag));
     }

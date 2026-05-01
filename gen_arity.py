@@ -188,6 +188,10 @@ def gen_row_enum(n):
 
     deconstruct_args = ", ".join(f"out Ptr<T{i}> p{i}" for i in range(1, n + 1))
     deconstruct_body = " ".join(f"p{i} = _ptr{i};" for i in range(1, n + 1))
+    deconstruct_args_e = ", ".join(["out EntityId entity"] + [f"out Ptr<T{i}> p{i}" for i in range(1, n + 1)])
+    deconstruct_body_e = " ".join(
+        ["entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx];"]
+        + [f"p{i} = _ptr{i};" for i in range(1, n + 1)])
 
     fast_advance = "\n".join(
         f"                _ptr{i}.Value = ref Unsafe.Add(ref _ptr{i}.Value, 1);" for i in range(1, n + 1))
@@ -267,6 +271,10 @@ public ref struct {R}
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct({deconstruct_args})
     {{ {deconstruct_body} }}
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct({deconstruct_args_e})
+    {{ {deconstruct_body_e} }}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()

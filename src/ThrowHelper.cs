@@ -128,12 +128,7 @@ internal static class ThrowHelper
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static void NoCurrentSystem()
-        => throw new InvalidOperationException("SystemCtx: no system currently dispatching.");
-
-    [DoesNotReturn]
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void SystemCtxWrongType(Type t)
         => throw new InvalidOperationException(
-            $"SystemCtx<{t.Name}>: ctx is null or wrong type.");
+            $"Iter.Ctx<{t.Name}>: ctx is null or wrong type.");
 }

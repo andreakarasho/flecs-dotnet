@@ -13,7 +13,36 @@ public interface IModule { void Build(World world); }
 // by r/w conflict and runs each wave (concurrent if workers configured).
 // Mirrors flecs ecs_system_desc_t (subset).
 // ============================================================================
-public delegate void SystemAction(World world, float deltaTime);
+public delegate void SystemAction(Iter iter);
+
+// Per-dispatch context handed to a system body. Carries world, the running
+// SystemHandle, and the frame's delta time. Mirrors flecs.NET `Iter` (the
+// shape of ecs_iter_t-wrapper passed into system callbacks). Keeps system
+// identity explicit instead of stashing it in ThreadStatic state.
+public readonly struct Iter
+{
+    public World World { get; }
+    public SystemHandle System { get; }
+    public float DeltaTime { get; }
+
+    internal Iter(World world, SystemHandle system, float deltaTime)
+    {
+        World = world;
+        System = system;
+        DeltaTime = deltaTime;
+    }
+
+    // Typed user-context accessor — equivalent to (T)System.Ctx. Throws
+    // InvalidOperationException if ctx is null or not assignable to T.
+    // No reference-type constraint: value-type ctx works (stored boxed
+    // inside SystemHandle.Ctx; unbox per call).
+    public T Ctx<T>()
+    {
+        if (System.Ctx is T t) return t;
+        ThrowHelper.SystemCtxWrongType(typeof(T));
+        return default!;
+    }
+}
 
 public sealed class SystemHandle
 {
@@ -41,7 +70,7 @@ public sealed class SystemHandle
     // Sources are timers (world.Timer) or rate filters (world.Rate).
     public EntityId TickSource { get; set; }
     // Optional user context. Stashed alongside the handle; readable inside
-    // the system body via World.CurrentSystem.Ctx or world.SystemCtx<T>().
+    // the system body via Iter.System.Ctx or iter.Ctx<T>().
     // Mirrors flecs ecs_system_desc_t.ctx.
     public object? Ctx { get; set; }
 

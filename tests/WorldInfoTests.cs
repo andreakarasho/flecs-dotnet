@@ -80,8 +80,8 @@ public class WorldInfoTests
     public void GetInfo_SystemCount()
     {
         var w = new World();
-        w.System("a", w.OnUpdate, (W, dt) => { });
-        w.System("b", w.OnUpdate, (W, dt) => { });
+        w.System("a", w.OnUpdate, _ => { });
+        w.System("b", w.OnUpdate, _ => { });
         Assert.Equal(2, w.GetInfo().SystemCount);
     }
 

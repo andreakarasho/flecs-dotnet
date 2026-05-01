@@ -31,7 +31,7 @@ class Program
             w.Set(e, new Velocity(1.0000001f, 1.0000001f));
         }
     }
-
+    
     static void Main()
     {
         const int N = 1_000_000;
@@ -40,7 +40,23 @@ class Program
         var ww = new World();
         CreateEntities(ww, 1000);
         SetPosVel(ww, 1000);
+        
+        var p = ww.Component<Position>();
+        var query = ww.Query<Position, Velocity>();
+        ww.System("ciao", ww.OnUpdate, it =>
+        {
+            (var i, var str, var query) = it.Ctx<(int, string, Query<Position, Velocity>)>();
 
+            foreach (var (ent, p, v) in query)
+            {
+                
+            }
+            
+        }).SetCtx((1, "asd", query));
+        
+        while (true) 
+            ww.Progress(0f);
+        
         // Bench CreateEntity alone.
         for (int run = 0; run < 3; run++)
         {

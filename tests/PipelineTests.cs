@@ -159,8 +159,8 @@ public class PipelineTests
     {
         var w = new World();
         // System() factory (no typed sugar) defaults ParallelSafe = false.
-        w.System("A", w.OnUpdate, (World _, float _dt) => { });
-        w.System("B", w.OnUpdate, (World _, float _dt) => { });
+        w.System("A", w.OnUpdate, _ => { });
+        w.System("B", w.OnUpdate, _ => { });
         var waves = w.GetPhaseWaves(w.OnUpdate);
         Assert.Equal(2, waves.Count);
     }

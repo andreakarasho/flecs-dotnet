@@ -152,6 +152,10 @@ public ref struct RowEnumerator<T1>
     { p1 = _ptr1; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
         if (++_rowIdx < _count)
@@ -374,6 +378,10 @@ public ref struct RowEnumerator<T1, T2>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2)
     { p1 = _ptr1; p2 = _ptr2; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -613,6 +621,10 @@ public ref struct RowEnumerator<T1, T2, T3>
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
         if (++_rowIdx < _count)
@@ -849,6 +861,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -1099,6 +1115,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -1361,6 +1381,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -1635,6 +1659,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -1921,6 +1949,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -2219,6 +2251,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -2529,6 +2565,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -2851,6 +2891,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -3185,6 +3229,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -3531,6 +3579,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -3889,6 +3941,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -4259,6 +4315,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14, out Ptr<T15> p15)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; p15 = _ptr15; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14, out Ptr<T15> p15)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; p15 = _ptr15; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -4641,6 +4701,10 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void Deconstruct(out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14, out Ptr<T15> p15, out Ptr<T16> p16)
     { p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; p15 = _ptr15; p16 = _ptr16; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void Deconstruct(out EntityId entity, out Ptr<T1> p1, out Ptr<T2> p2, out Ptr<T3> p3, out Ptr<T4> p4, out Ptr<T5> p5, out Ptr<T6> p6, out Ptr<T7> p7, out Ptr<T8> p8, out Ptr<T9> p9, out Ptr<T10> p10, out Ptr<T11> p11, out Ptr<T12> p12, out Ptr<T13> p13, out Ptr<T14> p14, out Ptr<T15> p15, out Ptr<T16> p16)
+    { entity = (_filter?.CurTable ?? _query._matched[_tableIdx]).Entities[_rowIdx]; p1 = _ptr1; p2 = _ptr2; p3 = _ptr3; p4 = _ptr4; p5 = _ptr5; p6 = _ptr6; p7 = _ptr7; p8 = _ptr8; p9 = _ptr9; p10 = _ptr10; p11 = _ptr11; p12 = _ptr12; p13 = _ptr13; p14 = _ptr14; p15 = _ptr15; p16 = _ptr16; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()

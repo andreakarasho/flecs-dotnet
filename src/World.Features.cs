@@ -68,7 +68,7 @@ public sealed partial class World
         where T1 : struct
     {
         var q = Query<T1>();
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
 
@@ -76,7 +76,7 @@ public sealed partial class World
         where T1 : struct where T2 : struct
     {
         var q = Query<T1, T2>();
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
 
@@ -84,7 +84,7 @@ public sealed partial class World
         where T1 : struct where T2 : struct where T3 : struct
     {
         var q = Query<T1, T2, T3>();
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
 
@@ -92,19 +92,19 @@ public sealed partial class World
     public SystemHandle System<T1>(string name, EntityId phase, Query<T1> q, Action<Query<T1>> body)
         where T1 : struct
     {
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
     public SystemHandle System<T1, T2>(string name, EntityId phase, Query<T1, T2> q, Action<Query<T1, T2>> body)
         where T1 : struct where T2 : struct
     {
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
     public SystemHandle System<T1, T2, T3>(string name, EntityId phase, Query<T1, T2, T3> q, Action<Query<T1, T2, T3>> body)
         where T1 : struct where T2 : struct where T3 : struct
     {
-        var h = System(name, phase, (w, dt) => body(q));
+        var h = System(name, phase, _ => body(q));
         return AttachQueryAccess(h, q);
     }
 
@@ -423,26 +423,8 @@ public sealed partial class World
             var s = wave[i];
             if (!s.Enabled) continue;
             if (!ShouldRunSystem(s)) continue;
-            var prev = _currentSystem;
-            _currentSystem = s;
-            try { s.Action(this, deltaTime); }
-            finally { _currentSystem = prev; }
+            s.Action(new Iter(this, s, deltaTime));
         }
-    }
-
-    // ThreadStatic active system. Set during dispatch (sequential and parallel),
-    // cleared after. Body code reads via World.CurrentSystem / SystemCtx<T>().
-    [System.ThreadStatic] private static SystemHandle? _currentSystem;
-    public SystemHandle? CurrentSystem => _currentSystem;
-    // Typed-context accessor — equivalent to (T)CurrentSystem!.Ctx. Throws
-    // InvalidOperationException if no system active or ctx is null/wrong type.
-    public T SystemCtx<T>() where T : class
-    {
-        var s = _currentSystem;
-        if (s == null) ThrowHelper.NoCurrentSystem();
-        if (s.Ctx is T t) return t;
-        ThrowHelper.SystemCtxWrongType(typeof(T));
-        return null!;
     }
 
     // Tick-source gate. Returns true when system has no source (always run)
@@ -494,9 +476,8 @@ public sealed partial class World
                 if (!s.Enabled) return;
                 if (!ShouldRunSystem(s)) return;
                 Stage.SetCurrent(stage);
-                _currentSystem = s;
-                try { s.Action(this, deltaTime); }
-                finally { _currentSystem = null; Stage.ClearCurrent(); }
+                try { s.Action(new Iter(this, s, deltaTime)); }
+                finally { Stage.ClearCurrent(); }
             });
         }
         Task.WaitAll(tasks);

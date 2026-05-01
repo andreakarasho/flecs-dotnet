@@ -26,7 +26,7 @@ public class TimerTests
         var w = new World();
         var t = w.Timer(0.25f);
         int hits = 0;
-        var s = w.System("slow", w.OnUpdate, (W, dt) => hits++);
+        var s = w.System("slow", w.OnUpdate, _ => hits++);
         s.TickSource = t;
         w.Progress(0.1f); // 0.1
         w.Progress(0.1f); // 0.2
@@ -43,8 +43,8 @@ public class TimerTests
         var t = w.Timer(0.1f);
         var r = w.Rate(t, 3);   // ticks every 3rd t-tick
         int hitsT = 0, hitsR = 0;
-        w.System("fast", w.OnUpdate, (W, dt) => hitsT++).TickSource = t;
-        w.System("slow", w.OnUpdate, (W, dt) => hitsR++).TickSource = r;
+        w.System("fast", w.OnUpdate, _ => hitsT++).TickSource = t;
+        w.System("slow", w.OnUpdate, _ => hitsR++).TickSource = r;
         for (int i = 0; i < 10; i++) w.Progress(0.1f);
         Assert.Equal(10, hitsT);
         Assert.Equal(3, hitsR);
@@ -57,7 +57,7 @@ public class TimerTests
         // SourceId 0 → drive off Progress every frame.
         var r = w.Rate(default, 4);
         int hits = 0;
-        w.System("every4", w.OnUpdate, (W, dt) => hits++).TickSource = r;
+        w.System("every4", w.OnUpdate, _ => hits++).TickSource = r;
         for (int i = 0; i < 12; i++) w.Progress(0.016f);
         Assert.Equal(3, hits);
     }
@@ -67,7 +67,7 @@ public class TimerTests
     {
         var w = new World();
         int hits = 0;
-        w.System("always", w.OnUpdate, (W, dt) => hits++);
+        w.System("always", w.OnUpdate, _ => hits++);
         for (int i = 0; i < 5; i++) w.Progress(0f);
         Assert.Equal(5, hits);
     }
@@ -78,8 +78,8 @@ public class TimerTests
         var w = new World();
         var t = w.Timer(0.5f);
         int aHits = 0, bHits = 0;
-        w.System("a", w.OnUpdate, (W, dt) => aHits++).TickSource = t;
-        w.System("b", w.OnUpdate, (W, dt) => bHits++).TickSource = t;
+        w.System("a", w.OnUpdate, _ => aHits++).TickSource = t;
+        w.System("b", w.OnUpdate, _ => bHits++).TickSource = t;
         for (int i = 0; i < 5; i++) w.Progress(0.5f);
         Assert.Equal(5, aHits);
         Assert.Equal(5, bHits);
@@ -105,7 +105,7 @@ public class TimerTests
         var r1 = w.Rate(t, 2);   // every 2 t-ticks
         var r2 = w.Rate(r1, 3);  // every 3 r1-ticks = every 6 t-ticks
         int hits = 0;
-        w.System("rare", w.OnUpdate, (W, dt) => hits++).TickSource = r2;
+        w.System("rare", w.OnUpdate, _ => hits++).TickSource = r2;
         for (int i = 0; i < 18; i++) w.Progress(0.1f);
         Assert.Equal(3, hits);
     }

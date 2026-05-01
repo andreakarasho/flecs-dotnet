@@ -11,9 +11,9 @@ public class SystemCtxTests
     {
         var w = new World();
         var state = new GameState { Score = 42, Name = "boot" };
-        var s = w.System("read-ctx", w.OnUpdate, (W, dt) =>
+        var s = w.System("read-ctx", w.OnUpdate, it =>
         {
-            var gs = W.SystemCtx<GameState>();
+            var gs = it.Ctx<GameState>();
             gs.Score++;
         });
         s.Ctx = state;
@@ -27,38 +27,30 @@ public class SystemCtxTests
     {
         var w = new World();
         var state = new GameState { Score = 10 };
-        w.System("x", w.OnUpdate, (W, dt) => W.SystemCtx<GameState>().Score++)
+        w.System("x", w.OnUpdate, it => it.Ctx<GameState>().Score++)
          .SetCtx(state);
         w.Progress(0f);
         Assert.Equal(11, state.Score);
     }
 
     [Fact]
-    public void CurrentSystem_NullOutsideDispatch()
-    {
-        var w = new World();
-        Assert.Null(w.CurrentSystem);
-    }
-
-    [Fact]
-    public void CurrentSystem_PointsAtRunningHandle()
+    public void Iter_SystemPointsAtRunningHandle()
     {
         var w = new World();
         SystemHandle? seen = null;
-        var s = w.System("self", w.OnUpdate, (W, dt) => seen = W.CurrentSystem);
+        var s = w.System("self", w.OnUpdate, it => seen = it.System);
         w.Progress(0f);
         Assert.Same(s, seen);
-        Assert.Null(w.CurrentSystem);
     }
 
     [Fact]
-    public void SystemCtx_NoCtx_Throws()
+    public void Ctx_NoCtx_Throws()
     {
         var w = new World();
         bool threw = false;
-        w.System("nope", w.OnUpdate, (W, dt) =>
+        w.System("nope", w.OnUpdate, it =>
         {
-            try { _ = W.SystemCtx<GameState>(); }
+            try { _ = it.Ctx<GameState>(); }
             catch (System.InvalidOperationException) { threw = true; }
         });
         w.Progress(0f);
@@ -72,8 +64,8 @@ public class SystemCtxTests
         var a = new GameState { Name = "A" };
         var b = new GameState { Name = "B" };
         string seenA = "", seenB = "";
-        w.System("a", w.OnUpdate, (W, dt) => seenA = W.SystemCtx<GameState>().Name).SetCtx(a);
-        w.System("b", w.OnUpdate, (W, dt) => seenB = W.SystemCtx<GameState>().Name).SetCtx(b);
+        w.System("a", w.OnUpdate, it => seenA = it.Ctx<GameState>().Name).SetCtx(a);
+        w.System("b", w.OnUpdate, it => seenB = it.Ctx<GameState>().Name).SetCtx(b);
         w.Progress(0f);
         Assert.Equal("A", seenA);
         Assert.Equal("B", seenB);
