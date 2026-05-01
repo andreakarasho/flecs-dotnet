@@ -110,7 +110,7 @@ public class InheritedViaTests
         w.SetParent(parent, grand);
         w.SetParent(child, parent);
         // Walk via ChildOf.
-        Assert.True(w.HasInheritedVia<Position>(child, w.ChildOf));
+        Assert.True(w.HasInheritedVia<Position>(child, w.Relations.ChildOf));
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class InheritedViaTests
         w.Set(grand, new Position(7, 8));
         w.SetParent(parent, grand);
         w.SetParent(child, parent);
-        ref var p = ref w.GetInheritedVia<Position>(child, w.ChildOf);
+        ref var p = ref w.GetInheritedVia<Position>(child, w.Relations.ChildOf);
         Assert.Equal(7, p.X);
     }
 
@@ -135,7 +135,7 @@ public class InheritedViaTests
         var child = w.CreateEntity();
         w.Set(grand, new Position(0, 0));
         w.SetParent(child, grand);
-        ref var p = ref w.GetInheritedVia<Position>(child, w.ChildOf);
+        ref var p = ref w.GetInheritedVia<Position>(child, w.Relations.ChildOf);
         p.X = 99;
         Assert.Equal(99, w.Get<Position>(grand).X);
     }
@@ -146,7 +146,7 @@ public class InheritedViaTests
         var w = new World();
         var lone = w.CreateEntity();
         w.Component<Position>();
-        Assert.False(w.TryGetInheritedVia<Position>(lone, w.ChildOf, out var _));
+        Assert.False(w.TryGetInheritedVia<Position>(lone, w.Relations.ChildOf, out var _));
     }
 
     [Fact]

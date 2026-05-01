@@ -10,7 +10,7 @@ public class PhaseTests
     {
         var w = new World();
         int hits = 0;
-        w.System("startup", w.OnStart, _ => hits++);
+        w.System("startup", w.Phases.OnStart, _ => hits++);
         Assert.Equal(0, hits);
         w.Progress(0f);
         Assert.Equal(1, hits);
@@ -24,8 +24,8 @@ public class PhaseTests
     {
         var w = new World();
         var order = new System.Collections.Generic.List<string>();
-        w.System("update", w.OnUpdate, _ => order.Add("update"));
-        w.System("startup", w.OnStart, _ => order.Add("startup"));
+        w.System("update", w.Phases.OnUpdate, _ => order.Add("update"));
+        w.System("startup", w.Phases.OnStart, _ => order.Add("startup"));
         w.Progress(0f);
         Assert.Equal(new[] { "startup", "update" }, order);
     }
@@ -35,9 +35,9 @@ public class PhaseTests
     {
         var w = new World();
         var order = new System.Collections.Generic.List<string>();
-        w.System("store", w.OnStore, _ => order.Add("store"));
-        w.System("load", w.OnLoad, _ => order.Add("load"));
-        w.System("update", w.OnUpdate, _ => order.Add("update"));
+        w.System("store", w.Phases.OnStore, _ => order.Add("store"));
+        w.System("load", w.Phases.OnLoad, _ => order.Add("load"));
+        w.System("update", w.Phases.OnUpdate, _ => order.Add("update"));
         w.Progress(0f);
         Assert.Equal(new[] { "load", "update", "store" }, order);
     }
@@ -47,11 +47,11 @@ public class PhaseTests
     {
         var w = new World();
         var custom = w.CreatePhase("Custom");
-        w.PhaseAfter(custom, w.OnUpdate);
+        w.PhaseAfter(custom, w.Phases.OnUpdate);
         var order = new System.Collections.Generic.List<string>();
-        w.System("upd", w.OnUpdate, _ => order.Add("upd"));
+        w.System("upd", w.Phases.OnUpdate, _ => order.Add("upd"));
         w.System("cus", custom, _ => order.Add("cus"));
-        w.System("post", w.PostUpdate, _ => order.Add("post"));
+        w.System("post", w.Phases.PostUpdate, _ => order.Add("post"));
         w.Progress(0f);
         // PostUpdate depends on OnValidate, OnValidate on OnUpdate. Custom also
         // on OnUpdate. Tiebreak by entity id — Custom created last, so id > PostUpdate.
@@ -86,7 +86,7 @@ public class PhaseTests
         var custom = w.CreatePhase("Floating");
         var order = new System.Collections.Generic.List<string>();
         w.System("custom-sys", custom, _ => order.Add("custom"));
-        w.System("load-sys", w.OnLoad, _ => order.Add("load"));
+        w.System("load-sys", w.Phases.OnLoad, _ => order.Add("load"));
         w.Progress(0f);
         // Builtins have lower ids → builtins run first, custom runs at the end
         // among indeg-0 phases. Just assert both ran.
@@ -99,10 +99,10 @@ public class PhaseTests
     public void Phase_HasReservedTag()
     {
         var w = new World();
-        Assert.True(w.Has(w.OnUpdate, (Id)w.Phase));
-        Assert.True(w.Has(w.OnStart, (Id)w.Phase));
+        Assert.True(w.Has(w.Phases.OnUpdate, (Id)w.PipelineMeta.Phase));
+        Assert.True(w.Has(w.Phases.OnStart, (Id)w.PipelineMeta.Phase));
         var custom = w.CreatePhase();
-        Assert.True(w.Has(custom, (Id)w.Phase));
+        Assert.True(w.Has(custom, (Id)w.PipelineMeta.Phase));
     }
 
     [Fact]

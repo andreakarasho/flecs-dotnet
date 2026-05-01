@@ -33,9 +33,9 @@ public class PipelineTests
         // Two systems on same phase, disjoint write sets → one wave.
         var qa = w.Query<Position>();
         var qb = w.Query<Velocity>();
-        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
-        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
-        var waves = w.GetPhaseWaves(w.OnUpdate);
+        w.System("A", w.Phases.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.Phases.OnUpdate, qb, q => { foreach (var _ in q) { } });
+        var waves = w.GetPhaseWaves(w.Phases.OnUpdate);
         Assert.Single(waves);
         Assert.Equal(2, waves[0].Count);
     }
@@ -46,9 +46,9 @@ public class PipelineTests
         var w = new World();
         var qa = w.Query<Position>();
         var qb = w.Query<Position>();
-        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
-        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
-        var waves = w.GetPhaseWaves(w.OnUpdate);
+        w.System("A", w.Phases.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.Phases.OnUpdate, qb, q => { foreach (var _ in q) { } });
+        var waves = w.GetPhaseWaves(w.Phases.OnUpdate);
         Assert.Equal(2, waves.Count);
     }
 
@@ -58,9 +58,9 @@ public class PipelineTests
         var w = new World();
         var qa = w.Query<Position>().Read<Position>();
         var qb = w.Query<Position>().Read<Position>();
-        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
-        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
-        var waves = w.GetPhaseWaves(w.OnUpdate);
+        w.System("A", w.Phases.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.Phases.OnUpdate, qb, q => { foreach (var _ in q) { } });
+        var waves = w.GetPhaseWaves(w.Phases.OnUpdate);
         Assert.Single(waves);
         Assert.Equal(2, waves[0].Count);
     }
@@ -71,9 +71,9 @@ public class PipelineTests
         var w = new World();
         var qa = w.Query<Position, Velocity>().Read<Velocity>();
         var qb = w.Query<Velocity>();
-        w.System("A", w.OnUpdate, qa, q => { foreach (var _ in q) { } });
-        w.System("B", w.OnUpdate, qb, q => { foreach (var _ in q) { } });
-        var waves = w.GetPhaseWaves(w.OnUpdate);
+        w.System("A", w.Phases.OnUpdate, qa, q => { foreach (var _ in q) { } });
+        w.System("B", w.Phases.OnUpdate, qb, q => { foreach (var _ in q) { } });
+        var waves = w.GetPhaseWaves(w.Phases.OnUpdate);
         Assert.Equal(2, waves.Count);
     }
 
@@ -84,7 +84,7 @@ public class PipelineTests
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Velocity(1, 2));
-        w.System<Position, Velocity>("Move", w.OnUpdate, q =>
+        w.System<Position, Velocity>("Move", w.Phases.OnUpdate, q =>
         {
             foreach (var (p, v) in q) { p.Value.X += v.Value.Dx; p.Value.Y += v.Value.Dy; }
         });
@@ -105,11 +105,11 @@ public class PipelineTests
             w.Set(ents[i], new Position(0, 0));
             w.Set(ents[i], new Velocity(1, 1));
         }
-        w.System<Position>("BumpPos", w.OnUpdate, q =>
+        w.System<Position>("BumpPos", w.Phases.OnUpdate, q =>
         {
             foreach (var row in q) row.Component1.Value.X += 1;
         });
-        w.System<Velocity>("BumpVel", w.OnUpdate, q =>
+        w.System<Velocity>("BumpVel", w.Phases.OnUpdate, q =>
         {
             foreach (var row in q) row.Component1.Value.Dx += 1;
         });
@@ -129,7 +129,7 @@ public class PipelineTests
         w.UseWorkers(2);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        w.System<Position>("AddVel", w.OnUpdate, q =>
+        w.System<Position>("AddVel", w.Phases.OnUpdate, q =>
         {
             foreach (var row in q) w.Set(row.Entity, new Velocity(7, 8));
         });
@@ -146,7 +146,7 @@ public class PipelineTests
         w.UseWorkers(0);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
-        w.System<Position>("Bump", w.OnUpdate, q =>
+        w.System<Position>("Bump", w.Phases.OnUpdate, q =>
         {
             foreach (var row in q) row.Component1.Value.X += 1;
         });
@@ -159,9 +159,9 @@ public class PipelineTests
     {
         var w = new World();
         // System() factory (no typed sugar) defaults ParallelSafe = false.
-        w.System("A", w.OnUpdate, _ => { });
-        w.System("B", w.OnUpdate, _ => { });
-        var waves = w.GetPhaseWaves(w.OnUpdate);
+        w.System("A", w.Phases.OnUpdate, _ => { });
+        w.System("B", w.Phases.OnUpdate, _ => { });
+        var waves = w.GetPhaseWaves(w.Phases.OnUpdate);
         Assert.Equal(2, waves.Count);
     }
 }

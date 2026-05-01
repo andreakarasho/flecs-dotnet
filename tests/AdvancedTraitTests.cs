@@ -11,7 +11,7 @@ public class AdvancedTraitTests
     public void ChildOf_DefaultAcyclic()
     {
         var w = new World();
-        Assert.True(w.IsAcyclic(w.ChildOf));
+        Assert.True(w.IsAcyclic(w.Relations.ChildOf));
     }
 
     [Fact]

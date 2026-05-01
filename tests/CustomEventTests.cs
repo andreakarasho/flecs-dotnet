@@ -135,7 +135,7 @@ public class CustomEventTests
         var p = w.CreateEntity();
         var c = w.CreateEntity();
         w.SetParent(c, p);
-        w.Emit<Click>(c, w.ChildOf);
+        w.Emit<Click>(c, w.Relations.ChildOf);
         Assert.Equal(new[] { c.Id, p.Id }, seen);
     }
 

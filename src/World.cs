@@ -60,59 +60,59 @@ public sealed partial class World
     // IsA      — builtin prefab/inheritance marker (EcsIsA). Inheritance
     //            semantics not yet implemented; the entity exists for tests
     //            and downstream wiring.
-    public readonly EntityId Wildcard;
-    public readonly EntityId ChildOf;
-    public readonly EntityId IsA;
+    internal readonly EntityId Wildcard;
+    internal readonly EntityId ChildOf;
+    internal readonly EntityId IsA;
     // Disabled — reserved tag. Add via Disable(); queries do NOT auto-exclude
     // (matches user-controlled flecs default). Use .Without(world.Disabled) on
     // queries to skip disabled entities.
-    public readonly EntityId Disabled;
+    internal readonly EntityId Disabled;
     // Component-trait tags. Final blocks IsA inheritance from target.
     // Exclusive enforces single (rel, *) per entity. Mirror EcsFinal /
     // EcsExclusive.
-    public readonly EntityId Final;
-    public readonly EntityId Exclusive;
+    internal readonly EntityId Final;
+    internal readonly EntityId Exclusive;
     // Acyclic    — relation cannot form cycles (enforced on Add).
     // Reflexive  — relation true for self (semantic flag; used by helpers).
     // Symmetric  — (R, B) on A also implies (R, A) on B. Auto-mirrored.
     // Transitive — (R, B) on A and (R, C) on B → (R, C) on A. Query-only.
-    public readonly EntityId Acyclic;
-    public readonly EntityId Reflexive;
-    public readonly EntityId Symmetric;
-    public readonly EntityId Transitive;
+    internal readonly EntityId Acyclic;
+    internal readonly EntityId Reflexive;
+    internal readonly EntityId Symmetric;
+    internal readonly EntityId Transitive;
     // Inheritable — default. Component propagates via IsA.
     // DontInherit — opt out. IsA chain walk stops at direct presence.
     // Traversable — relation eligible for query traversal sources (Up, Cascade,
     //               Parent). Passive metadata for now (term sources NYI).
-    public readonly EntityId Inheritable;
-    public readonly EntityId DontInherit;
-    public readonly EntityId Traversable;
+    internal readonly EntityId Inheritable;
+    internal readonly EntityId DontInherit;
+    internal readonly EntityId Traversable;
     // CanToggle — component opted into non-fragmenting enable/disable. Tables
     // containing CanToggle component-ids allocate parallel Bitset columns;
     // Toggle/SetEnabled flip bits in place (no archetype migration). Iteration
     // skips rows where any required term's bit is clear. Mirrors flecs
     // EcsCanToggle.
-    public readonly EntityId CanToggle;
+    internal readonly EntityId CanToggle;
     // Phase  — reserved tag. Marks an entity as a pipeline phase. Builtin phases
     //          are tagged automatically; user phases via world.Phase().
     // DependsOn — reserved relation. (DependsOn, predecessor) on a phase X means
     //             X runs after predecessor in topological order. Phase ordering
     //             is the topological sort over DependsOn across all Phase-tagged
     //             entities. Mirrors flecs EcsPhase / EcsDependsOn.
-    public readonly EntityId Phase;
-    public readonly EntityId DependsOn;
+    internal readonly EntityId Phase;
+    internal readonly EntityId DependsOn;
     // System  — reserved tag. Marks an entity as a system. Auto-added to every
     //           SystemHandle.Entity. Pipeline filters typically include this
     //           in their With-set so they only match systems.
     // Pipeline — reserved tag. Marks an entity as a pipeline (entity carrying a
     //            PipelineFilter component that selects which systems run).
-    public readonly EntityId SystemTag;
-    public readonly EntityId Pipeline;
+    internal readonly EntityId SystemTag;
+    internal readonly EntityId Pipeline;
     // Builtin phases. Progress() runs systems in topological order over the
     // DependsOn chain wired below. Mirror flecs builtin pipeline phase ordering.
     // OnStart fires once on the first Progress call only — startup phase.
-    public readonly EntityId OnStart;
-    public readonly EntityId OnLoad, PostLoad, PreUpdate, OnUpdate,
+    internal readonly EntityId OnStart;
+    internal readonly EntityId OnLoad, PostLoad, PreUpdate, OnUpdate,
                               OnValidate, PostUpdate, PreStore, OnStore;
 
     // Phase-ordered list — rebuilt lazily via topo sort over DependsOn pairs

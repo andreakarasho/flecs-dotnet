@@ -10,7 +10,7 @@ public class SystemTests
     {
         var w = new World();
         int calls = 0;
-        w.System("s", w.OnUpdate, _ => calls++);
+        w.System("s", w.Phases.OnUpdate, _ => calls++);
         w.Progress(0.016f);
         Assert.Equal(1, calls);
     }
@@ -20,9 +20,9 @@ public class SystemTests
     {
         var w = new World();
         var order = new List<string>();
-        w.System("c", w.OnStore, _ => order.Add("OnStore"));
-        w.System("a", w.OnLoad, _ => order.Add("OnLoad"));
-        w.System("b", w.OnUpdate, _ => order.Add("OnUpdate"));
+        w.System("c", w.Phases.OnStore, _ => order.Add("OnStore"));
+        w.System("a", w.Phases.OnLoad, _ => order.Add("OnLoad"));
+        w.System("b", w.Phases.OnUpdate, _ => order.Add("OnUpdate"));
         w.Progress(0);
         Assert.Equal(new[] { "OnLoad", "OnUpdate", "OnStore" }, order);
     }
@@ -32,9 +32,9 @@ public class SystemTests
     {
         var w = new World();
         var order = new List<string>();
-        w.System("first", w.OnUpdate, _ => order.Add("first"));
-        w.System("second", w.OnUpdate, _ => order.Add("second"));
-        w.System("third", w.OnUpdate, _ => order.Add("third"));
+        w.System("first", w.Phases.OnUpdate, _ => order.Add("first"));
+        w.System("second", w.Phases.OnUpdate, _ => order.Add("second"));
+        w.System("third", w.Phases.OnUpdate, _ => order.Add("third"));
         w.Progress(0);
         Assert.Equal(new[] { "first", "second", "third" }, order);
     }
@@ -44,7 +44,7 @@ public class SystemTests
     {
         var w = new World();
         int calls = 0;
-        w.System("s", w.OnUpdate, _ => calls++).SetEnabled(false);
+        w.System("s", w.Phases.OnUpdate, _ => calls++).SetEnabled(false);
         w.Progress(0);
         Assert.Equal(0, calls);
     }
@@ -54,7 +54,7 @@ public class SystemTests
     {
         var w = new World();
         float seen = 0;
-        w.System("s", w.OnUpdate, it => seen = it.DeltaTime);
+        w.System("s", w.Phases.OnUpdate, it => seen = it.DeltaTime);
         w.Progress(0.123f);
         Assert.Equal(0.123f, seen);
     }
@@ -69,7 +69,7 @@ public class SystemTests
             w.Set(e, new Position(i, 0));
             w.Set(e, new Velocity(1, 0));
         }
-        w.System<Position, Velocity>("integrate", w.OnUpdate, q =>
+        w.System<Position, Velocity>("integrate", w.Phases.OnUpdate, q =>
         {
             foreach (var (p, v) in q) p.Value.X += v.Value.Dx;
         });

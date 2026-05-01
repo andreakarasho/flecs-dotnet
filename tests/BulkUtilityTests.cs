@@ -114,7 +114,7 @@ public class BulkUtilityTests
         w.Set(b, new Position(0, 0));
         w.Disable(b);
         int hits = 0;
-        foreach (var _ in w.Query<Position>().Without(w.Disabled)) hits++;
+        foreach (var _ in w.Query<Position>().Without(w.States.Disabled)) hits++;
         Assert.Equal(1, hits);
     }
 }

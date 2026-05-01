@@ -17,7 +17,7 @@ public class EventPropagationTests
         var parent = w.CreateEntity();
         var child = w.CreateEntity();
         w.SetParent(child, parent);
-        w.Emit<OnDamage, TagA>(child, w.ChildOf);
+        w.Emit<OnDamage, TagA>(child, w.Relations.ChildOf);
 
         Assert.Equal(2, seen.Count);
         Assert.Equal(child.Id, seen[0]);
@@ -36,7 +36,7 @@ public class EventPropagationTests
         var leaf = w.CreateEntity();
         w.SetParent(mid, root);
         w.SetParent(leaf, mid);
-        w.Emit<OnDamage, TagA>(leaf, w.ChildOf);
+        w.Emit<OnDamage, TagA>(leaf, w.Relations.ChildOf);
 
         Assert.Equal(new[] { leaf.Id, mid.Id, root.Id }, seen);
     }
@@ -65,7 +65,7 @@ public class EventPropagationTests
         w.Observer<OnDamage, TagA>(it => hits++);
 
         var lone = w.CreateEntity();
-        w.Emit<OnDamage, TagA>(lone, w.ChildOf);
+        w.Emit<OnDamage, TagA>(lone, w.Relations.ChildOf);
         Assert.Equal(1, hits);
     }
 
@@ -79,7 +79,7 @@ public class EventPropagationTests
         var prefab = w.CreateEntity();
         var inst = w.CreateEntity();
         w.SetIsA(inst, prefab);
-        w.Emit<OnDamage, TagA>(inst, w.IsA);
+        w.Emit<OnDamage, TagA>(inst, w.Relations.IsA);
 
         Assert.Equal(new[] { inst.Id, prefab.Id }, seen);
     }
@@ -99,7 +99,7 @@ public class EventPropagationTests
         w.SetIsA(c, a);
         w.SetIsA(d, b);
         w.SetIsA(d, c);
-        w.Emit<OnDamage, TagA>(d, w.IsA);
+        w.Emit<OnDamage, TagA>(d, w.Relations.IsA);
 
         Assert.Equal(4, seen.Count);
         Assert.Equal(seen.Count, new HashSet<uint>(seen).Count);
@@ -116,7 +116,7 @@ public class EventPropagationTests
         var b = w.CreateEntity();
         w.SetIsA(a, b);
         w.SetIsA(b, a);
-        w.Emit<OnDamage, TagA>(a, w.IsA);
+        w.Emit<OnDamage, TagA>(a, w.Relations.IsA);
         Assert.Equal(2, hits);
     }
 
@@ -127,7 +127,7 @@ public class EventPropagationTests
         var p = w.CreateEntity();
         var c = w.CreateEntity();
         w.SetParent(c, p);
-        w.Emit<OnDamage, TagA>(c, w.ChildOf);
+        w.Emit<OnDamage, TagA>(c, w.Relations.ChildOf);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class EventPropagationTests
         var parent = w.CreateEntity();
         var child = w.CreateEntity();
         w.SetParent(child, parent);
-        w.Emit<OnDamage, Likes, Apple>(child, w.ChildOf);
+        w.Emit<OnDamage, Likes, Apple>(child, w.Relations.ChildOf);
 
         Assert.Equal(new[] { child.Id, parent.Id }, seen);
     }

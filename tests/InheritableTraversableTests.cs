@@ -111,11 +111,11 @@ public class InheritableTraversableTests
         var w = new World();
         var compEnt = w.Component<Position>();
         w.MarkDontInherit(compEnt);
-        Assert.True(w.Has(compEnt, (Id)w.DontInherit));
+        Assert.True(w.Has(compEnt, (Id)w.ComponentTraits.DontInherit));
         // Inheritable tag dropped (if it was added).
         w.MarkInheritable(compEnt);
-        Assert.False(w.Has(compEnt, (Id)w.DontInherit));
-        Assert.True(w.Has(compEnt, (Id)w.Inheritable));
+        Assert.False(w.Has(compEnt, (Id)w.ComponentTraits.DontInherit));
+        Assert.True(w.Has(compEnt, (Id)w.ComponentTraits.Inheritable));
     }
 
     // ---------- Traversable ----------
@@ -124,14 +124,14 @@ public class InheritableTraversableTests
     public void ChildOf_DefaultTraversable()
     {
         var w = new World();
-        Assert.True(w.IsTraversable(w.ChildOf));
+        Assert.True(w.IsTraversable(w.Relations.ChildOf));
     }
 
     [Fact]
     public void IsA_DefaultTraversable()
     {
         var w = new World();
-        Assert.True(w.IsTraversable(w.IsA));
+        Assert.True(w.IsTraversable(w.Relations.IsA));
     }
 
     [Fact]
@@ -159,6 +159,6 @@ public class InheritableTraversableTests
         var w = new World();
         var rel = w.CreateEntity();
         w.MarkTraversable(rel);
-        Assert.True(w.Has(rel, (Id)w.Traversable));
+        Assert.True(w.Has(rel, (Id)w.RelationTraits.Traversable));
     }
 }

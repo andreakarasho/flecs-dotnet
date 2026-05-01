@@ -60,7 +60,7 @@ public class TraitTests
         var w = new World();
         var e = w.CreateEntity();
         w.MarkFinal(e);
-        Assert.True(w.Has(e, (Id)w.Final));
+        Assert.True(w.Has(e, (Id)w.RelationTraits.Final));
     }
 
     // ---------- Exclusive ----------
@@ -69,14 +69,14 @@ public class TraitTests
     public void ChildOf_DefaultExclusive()
     {
         var w = new World();
-        Assert.True(w.IsExclusive(w.ChildOf));
+        Assert.True(w.IsExclusive(w.Relations.ChildOf));
     }
 
     [Fact]
     public void IsA_NotExclusiveByDefault()
     {
         var w = new World();
-        Assert.False(w.IsExclusive(w.IsA));
+        Assert.False(w.IsExclusive(w.Relations.IsA));
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class TraitTests
         var p2 = w.CreateEntity();
         var c = w.CreateEntity();
         // Subscribe to specific (ChildOf, p1) pair removal — builtin OnRemove.
-        w.Observer(Id.MakePair(w.ChildOf, p1), Event.OnRemove, it => onRemove++);
+        w.Observer(Id.MakePair(w.Relations.ChildOf, p1), Event.OnRemove, it => onRemove++);
         w.SetParent(c, p1);
         w.SetParent(c, p2); // exclusive: removes (ChildOf, p1) → fires OnRemove
         Assert.Equal(1, onRemove);
@@ -183,6 +183,6 @@ public class TraitTests
         var w = new World();
         var rel = w.CreateEntity();
         w.MarkExclusive(rel);
-        Assert.True(w.Has(rel, (Id)w.Exclusive));
+        Assert.True(w.Has(rel, (Id)w.RelationTraits.Exclusive));
     }
 }

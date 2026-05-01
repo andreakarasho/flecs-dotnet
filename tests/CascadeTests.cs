@@ -64,7 +64,7 @@ public class CascadeTests
         var leaf = w.CreateEntity(); w.Set(leaf, new Position(3, 3)); w.SetIsA(leaf, sub);
 
         var order = new List<uint>();
-        foreach (var row in w.Query<Position>().Cascade<Position>(w.IsA))
+        foreach (var row in w.Query<Position>().Cascade<Position>(w.Relations.IsA))
         {
             var e = row.Entity;
             if (e.Id == prefab.Id || e.Id == sub.Id || e.Id == leaf.Id) order.Add(e.Id);

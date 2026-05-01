@@ -31,7 +31,7 @@ public class TraversalQueryTests
         w.SetParent(child, parent);
 
         var seen = new HashSet<uint>();
-        foreach (var row in w.Query<Position>().Up<Position>(w.ChildOf))
+        foreach (var row in w.Query<Position>().Up<Position>(w.Relations.ChildOf))
             seen.Add(row.Entity.Id);
         Assert.Contains(parent.Id, seen);
         Assert.Contains(child.Id, seen);
@@ -49,7 +49,7 @@ public class TraversalQueryTests
         w.SetParent(child, parent);
 
         var byEntity = new Dictionary<uint, float>();
-        foreach (var row in w.Query<Position>().Up<Position>(w.ChildOf))
+        foreach (var row in w.Query<Position>().Up<Position>(w.Relations.ChildOf))
             byEntity[row.Entity.Id] = row.Component1.Value.X;
         Assert.Equal(11, byEntity[grand.Id]);
         Assert.Equal(11, byEntity[parent.Id]);
@@ -108,7 +108,7 @@ public class TraversalQueryTests
         w.SetParent(child, parent);
 
         var seen = new HashSet<uint>();
-        foreach (var row in w.Query<Position>().Inherited().Up<Position>(w.ChildOf))
+        foreach (var row in w.Query<Position>().Inherited().Up<Position>(w.Relations.ChildOf))
             seen.Add(row.Entity.Id);
         Assert.Contains(parent.Id, seen);
         Assert.Contains(child.Id, seen);
@@ -125,7 +125,7 @@ public class TraversalQueryTests
         w.Set(child, new Position(99, 99));
 
         var byEntity = new Dictionary<uint, float>();
-        foreach (var row in w.Query<Position>().Up<Position>(w.ChildOf))
+        foreach (var row in w.Query<Position>().Up<Position>(w.Relations.ChildOf))
             byEntity[row.Entity.Id] = row.Component1.Value.X;
         Assert.Equal(1, byEntity[parent.Id]);
         Assert.Equal(99, byEntity[child.Id]);

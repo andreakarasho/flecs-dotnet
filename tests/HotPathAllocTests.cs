@@ -31,7 +31,7 @@ public class HotPathAllocTests
     public void Progress_ZeroAllocSteadyState()
     {
         var w = new World();
-        w.System("noop", w.OnUpdate, _ => { });
+        w.System("noop", w.Phases.OnUpdate, _ => { });
         // Warmup.
         for (int i = 0; i < 10; i++) w.Progress(0.016f);
         var before = Bytes();
@@ -215,8 +215,8 @@ public class HotPathAllocTests
         var w1 = new World();
         var w2 = new World();
         int t1 = 0, t2 = 0;
-        w1.System("a", w1.OnUpdate, _ => t1++);
-        w2.System("b", w2.OnUpdate, _ => t2++);
+        w1.System("a", w1.Phases.OnUpdate, _ => t1++);
+        w2.System("b", w2.Phases.OnUpdate, _ => t2++);
         for (int i = 0; i < 5; i++) w1.Progress(0);
         for (int i = 0; i < 3; i++) w2.Progress(0);
         Assert.Equal(5, t1);
