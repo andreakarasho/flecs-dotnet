@@ -199,8 +199,8 @@ public class HotPathAllocTests
         var w1 = new World();
         var w2 = new World();
         int hits1 = 0, hits2 = 0;
-        w1.Hooks<Position>().OnSet = (World _, EntityId _, ref Position _) => hits1++;
-        w2.Hooks<Position>().OnSet = (World _, EntityId _, ref Position _) => hits2++;
+        w1.Hooks<Position>().SetOnSet((World _, EntityId _, ref Position _) => hits1++);
+        w2.Hooks<Position>().SetOnSet((World _, EntityId _, ref Position _) => hits2++);
         var e1 = w1.CreateEntity();
         var e2 = w2.CreateEntity();
         w1.Set(e1, new Position(0, 0));

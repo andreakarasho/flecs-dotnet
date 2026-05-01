@@ -10,7 +10,7 @@ public class HookTests
     {
         var w = new World();
         int calls = 0;
-        w.Hooks<Position>().OnAdd = (World W, EntityId e, ref Position _) => calls++;
+        w.Hooks<Position>().SetOnAdd((World W, EntityId e, ref Position _) => calls++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         Assert.Equal(1, calls);
@@ -21,7 +21,7 @@ public class HookTests
     {
         var w = new World();
         int calls = 0;
-        w.Hooks<Position>().OnAdd = (World W, EntityId e, ref Position _) => calls++;
+        w.Hooks<Position>().SetOnAdd((World W, EntityId e, ref Position _) => calls++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Position(1, 1));
@@ -33,7 +33,7 @@ public class HookTests
     {
         var w = new World();
         int calls = 0;
-        w.Hooks<Position>().OnSet = (World W, EntityId e, ref Position _) => calls++;
+        w.Hooks<Position>().SetOnSet((World W, EntityId e, ref Position _) => calls++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Position(1, 1));
@@ -46,7 +46,7 @@ public class HookTests
     {
         var w = new World();
         int calls = 0;
-        w.Hooks<Position>().OnRemove = (World W, EntityId e, ref Position _) => calls++;
+        w.Hooks<Position>().SetOnRemove((World W, EntityId e, ref Position _) => calls++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Remove<Position>(e);
@@ -58,7 +58,7 @@ public class HookTests
     {
         var w = new World();
         int calls = 0;
-        w.Hooks<Position>().OnRemove = (World W, EntityId e, ref Position _) => calls++;
+        w.Hooks<Position>().SetOnRemove((World W, EntityId e, ref Position _) => calls++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Delete(e);
@@ -70,8 +70,8 @@ public class HookTests
     {
         var w = new World();
         var order = new List<string>();
-        w.Hooks<Position>().Ctor = (World W, EntityId e, ref Position p) => { order.Add("ctor"); p.X = -1; };
-        w.Hooks<Position>().OnAdd = (World W, EntityId e, ref Position p) => order.Add($"onadd:{p.X}");
+        w.Hooks<Position>().SetCtor((World W, EntityId e, ref Position p) => { order.Add("ctor"); p.X = -1; });
+        w.Hooks<Position>().SetOnAdd((World W, EntityId e, ref Position p) => order.Add($"onadd:{p.X}"));
         var e = w.CreateEntity();
         w.Set(e, new Position(5, 5));
         Assert.Equal(new[] { "ctor", "onadd:-1", }, order.GetRange(0, 2));
@@ -82,8 +82,8 @@ public class HookTests
     {
         var w = new World();
         var order = new List<string>();
-        w.Hooks<Position>().OnRemove = (World W, EntityId e, ref Position _) => order.Add("onremove");
-        w.Hooks<Position>().Dtor = (World W, EntityId e, ref Position _) => order.Add("dtor");
+        w.Hooks<Position>().SetOnRemove((World W, EntityId e, ref Position _) => order.Add("onremove"));
+        w.Hooks<Position>().SetDtor((World W, EntityId e, ref Position _) => order.Add("dtor"));
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Remove<Position>(e);
@@ -95,7 +95,7 @@ public class HookTests
     {
         var w = new World();
         float observed = 0;
-        w.Hooks<Position>().OnSet = (World W, EntityId e, ref Position p) => observed = p.X;
+        w.Hooks<Position>().SetOnSet((World W, EntityId e, ref Position p) => observed = p.X);
         var e = w.CreateEntity();
         w.Set(e, new Position(42, 0));
         Assert.Equal(42, observed);
@@ -106,7 +106,7 @@ public class HookTests
     {
         var w = new World();
         float observed = 0;
-        w.Hooks<Position>().OnRemove = (World W, EntityId e, ref Position p) => observed = p.X;
+        w.Hooks<Position>().SetOnRemove((World W, EntityId e, ref Position p) => observed = p.X);
         var e = w.CreateEntity();
         w.Set(e, new Position(7, 0));
         w.Remove<Position>(e);

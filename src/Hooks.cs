@@ -17,13 +17,25 @@ public delegate void TypeHookCopy<T>(World world, EntityId entity, ref T src, re
 
 public sealed class TypeHooks<T> where T : struct
 {
-    public TypeHookAction<T>? Ctor;
-    public TypeHookAction<T>? Dtor;
-    public TypeHookAction<T>? OnAdd;
-    public TypeHookAction<T>? OnRemove;
-    public TypeHookAction<T>? OnSet;
-    public TypeHookCopy<T>? Copy;
-    public TypeHookCopy<T>? Move;
+    // Read-only to user; mutated via fluent Set* methods or internal multicast
+    // (`h.OnAdd += x`) from World observer registration paths.
+    public TypeHookAction<T>? Ctor { get; internal set; }
+    public TypeHookAction<T>? Dtor { get; internal set; }
+    public TypeHookAction<T>? OnAdd { get; internal set; }
+    public TypeHookAction<T>? OnRemove { get; internal set; }
+    public TypeHookAction<T>? OnSet { get; internal set; }
+    public TypeHookCopy<T>? Copy { get; internal set; }
+    public TypeHookCopy<T>? Move { get; internal set; }
+
+    // Fluent setters — replace style. For multicast, register multiple
+    // observers via World.Observe<T> instead of stacking via this entry.
+    public TypeHooks<T> SetCtor(TypeHookAction<T>? cb) { Ctor = cb; return this; }
+    public TypeHooks<T> SetDtor(TypeHookAction<T>? cb) { Dtor = cb; return this; }
+    public TypeHooks<T> SetOnAdd(TypeHookAction<T>? cb) { OnAdd = cb; return this; }
+    public TypeHooks<T> SetOnRemove(TypeHookAction<T>? cb) { OnRemove = cb; return this; }
+    public TypeHooks<T> SetOnSet(TypeHookAction<T>? cb) { OnSet = cb; return this; }
+    public TypeHooks<T> SetCopy(TypeHookCopy<T>? cb) { Copy = cb; return this; }
+    public TypeHooks<T> SetMove(TypeHookCopy<T>? cb) { Move = cb; return this; }
 }
 
 // ============================================================================

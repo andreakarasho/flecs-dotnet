@@ -53,12 +53,12 @@ public class CopyMoveHookTests
     {
         var w = new World();
         int moves = 0;
-        w.Hooks<Position>().Move = (World W, EntityId e, ref Position src, ref Position dst) =>
+        w.Hooks<Position>().SetMove((World W, EntityId e, ref Position src, ref Position dst) =>
         {
             moves++;
             dst = src;
             src = default;
-        };
+        });
         var e = w.CreateEntity();
         w.Set(e, new Position(1, 2));
         // Cause an archetype migration: Add a Velocity, forces move.
@@ -72,11 +72,11 @@ public class CopyMoveHookTests
     {
         var w = new World();
         int copies = 0;
-        w.Hooks<Position>().Copy = (World W, EntityId e, ref Position src, ref Position dst) =>
+        w.Hooks<Position>().SetCopy((World W, EntityId e, ref Position src, ref Position dst) =>
         {
             copies++;
             dst = src;
-        };
+        });
         var src = w.CreateEntity();
         w.Set(src, new Position(7, 8));
         var dst = w.Clone(src);

@@ -142,7 +142,7 @@ public class SparseStorageTests
         w.Component<Position>();
         w.MarkSparse<Position>();
         int hits = 0;
-        w.Hooks<Position>().OnSet = (World _, EntityId _, ref Position _) => hits++;
+        w.Hooks<Position>().SetOnSet((World _, EntityId _, ref Position _) => hits++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Position(1, 1));
@@ -156,7 +156,7 @@ public class SparseStorageTests
         w.Component<Position>();
         w.MarkSparse<Position>();
         int adds = 0;
-        w.Hooks<Position>().OnAdd = (World _, EntityId _, ref Position _) => adds++;
+        w.Hooks<Position>().SetOnAdd((World _, EntityId _, ref Position _) => adds++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Position(1, 1));
@@ -170,7 +170,7 @@ public class SparseStorageTests
         w.Component<Position>();
         w.MarkSparse<Position>();
         int rms = 0;
-        w.Hooks<Position>().OnRemove = (World _, EntityId _, ref Position _) => rms++;
+        w.Hooks<Position>().SetOnRemove((World _, EntityId _, ref Position _) => rms++);
         var a = w.CreateEntity();
         var b = w.CreateEntity();
         w.Set(a, new Position(0, 0));
