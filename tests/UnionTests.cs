@@ -110,8 +110,8 @@ public class UnionTests
         w.MarkUnion<Movement>();
         // Tag pair hooks via Observer<TR, TT>.
         int addsRunning = 0, removesWalking = 0;
-        w.Observer<Movement, Walking>(Event.OnRemove, (W, _) => removesWalking++);
-        w.Observer<Movement, Running>(Event.OnAdd, (W, _) => addsRunning++);
+        w.Observer<Movement, Walking>(Event.OnRemove, _ => removesWalking++);
+        w.Observer<Movement, Running>(Event.OnAdd, _ => addsRunning++);
         var e = w.CreateEntity();
         w.Add<Movement, Walking>(e);
         Assert.Equal(0, addsRunning);
@@ -126,7 +126,7 @@ public class UnionTests
         var w = new World();
         w.MarkUnion<Movement>();
         int adds = 0;
-        w.Observer<Movement, Walking>(Event.OnAdd, (W, _) => adds++);
+        w.Observer<Movement, Walking>(Event.OnAdd, _ => adds++);
         var e = w.CreateEntity();
         w.Add<Movement, Walking>(e);
         w.Add<Movement, Walking>(e);

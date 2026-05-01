@@ -12,7 +12,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, TagA>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, TagA>(it => seen.Add(it.Entity.Id));
 
         var parent = w.CreateEntity();
         var child = w.CreateEntity();
@@ -29,7 +29,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, TagA>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, TagA>(it => seen.Add(it.Entity.Id));
 
         var root = w.CreateEntity();
         var mid = w.CreateEntity();
@@ -46,7 +46,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, TagA>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, TagA>(it => seen.Add(it.Entity.Id));
 
         var parent = w.CreateEntity();
         var child = w.CreateEntity();
@@ -62,7 +62,7 @@ public class EventPropagationTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<OnDamage, TagA>((W, e) => hits++);
+        w.Observer<OnDamage, TagA>(it => hits++);
 
         var lone = w.CreateEntity();
         w.Emit<OnDamage, TagA>(lone, w.ChildOf);
@@ -74,7 +74,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, TagA>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, TagA>(it => seen.Add(it.Entity.Id));
 
         var prefab = w.CreateEntity();
         var inst = w.CreateEntity();
@@ -89,7 +89,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, TagA>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, TagA>(it => seen.Add(it.Entity.Id));
 
         var a = w.CreateEntity();
         var b = w.CreateEntity();
@@ -110,7 +110,7 @@ public class EventPropagationTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<OnDamage, TagA>((W, e) => hits++);
+        w.Observer<OnDamage, TagA>(it => hits++);
 
         var a = w.CreateEntity();
         var b = w.CreateEntity();
@@ -135,7 +135,7 @@ public class EventPropagationTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<OnDamage, Likes, Apple>((W, e) => seen.Add(e.Id));
+        w.Observer<OnDamage, Likes, Apple>(it => seen.Add(it.Entity.Id));
 
         var parent = w.CreateEntity();
         var child = w.CreateEntity();

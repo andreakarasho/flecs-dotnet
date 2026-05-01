@@ -17,7 +17,7 @@ public class YieldExistingTests
         // c has no Position
         var seen = new List<uint>();
         w.Observer<Position>(Event.OnAdd,
-            (World W, EntityId e, ref Position _) => seen.Add(e.Id),
+            (EventIter it, ref Position _) => seen.Add(it.Entity.Id),
             yieldExisting: true);
         Assert.Equal(2, seen.Count);
         Assert.Contains(a.Id, seen);
@@ -33,7 +33,7 @@ public class YieldExistingTests
         w.Set(e, new Position(7, 8));
         float x = 0;
         w.Observer<Position>(Event.OnAdd,
-            (World W, EntityId _, ref Position p) => x = p.X,
+            (EventIter it, ref Position p) => x = p.X,
             yieldExisting: true);
         Assert.Equal(7, x);
     }
@@ -48,7 +48,7 @@ public class YieldExistingTests
         w.Add<TagA>(a);
         w.Add<TagA>(b);
         var seen = new HashSet<uint>();
-        w.Observer<TagA>(Event.OnAdd, (W, e) => seen.Add(e.Id), yieldExisting: true);
+        w.Observer<TagA>(Event.OnAdd, it => seen.Add(it.Entity.Id), yieldExisting: true);
         Assert.Equal(2, seen.Count);
         Assert.Contains(a.Id, seen);
         Assert.Contains(b.Id, seen);
@@ -63,7 +63,7 @@ public class YieldExistingTests
         w.Add<Likes, Apple>(a);
         w.Add<Likes, Apple>(b);
         var seen = new HashSet<uint>();
-        w.Observer<Likes, Apple>(Event.OnAdd, (W, e) => seen.Add(e.Id), yieldExisting: true);
+        w.Observer<Likes, Apple>(Event.OnAdd, it => seen.Add(it.Entity.Id), yieldExisting: true);
         Assert.Equal(2, seen.Count);
     }
 
@@ -75,7 +75,7 @@ public class YieldExistingTests
         w.Set(e, new Position(0, 0));
         int hits = 0;
         w.Observer<Position>(Event.OnAdd,
-            (World W, EntityId _, ref Position _) => hits++);
+            (EventIter it, ref Position _) => hits++);
         Assert.Equal(0, hits);
     }
 
@@ -87,7 +87,7 @@ public class YieldExistingTests
         w.Set(a, new Position(0, 0));
         int hits = 0;
         w.Observer<Position>(Event.OnAdd,
-            (World W, EntityId _, ref Position _) => hits++,
+            (EventIter it, ref Position _) => hits++,
             yieldExisting: true);
         Assert.Equal(1, hits); // retroactive
         var b = w.CreateEntity();
@@ -103,7 +103,7 @@ public class YieldExistingTests
         w.Set(e, new Position(0, 0));
         int hits = 0;
         w.Observer<Position>(Event.OnRemove,
-            (World W, EntityId _, ref Position _) => hits++,
+            (EventIter it, ref Position _) => hits++,
             yieldExisting: true);
         // Living entity hasn't lost it — no retroactive fire.
         Assert.Equal(0, hits);
@@ -121,7 +121,7 @@ public class YieldExistingTests
         w.Set(b, new Position(2, 0));
         var values = new List<float>();
         w.Observer<Position>(Event.OnSet,
-            (World W, EntityId _, ref Position p) => values.Add(p.X),
+            (EventIter it, ref Position p) => values.Add(p.X),
             yieldExisting: true);
         Assert.Equal(2, values.Count);
         Assert.Contains(1f, values);
@@ -140,7 +140,7 @@ public class YieldExistingTests
         w.Set(b, new Velocity(0, 0));
         int hits = 0;
         w.Observer<Position>(Event.OnAdd,
-            (World W, EntityId _, ref Position _) => hits++,
+            (EventIter it, ref Position _) => hits++,
             yieldExisting: true);
         Assert.Equal(2, hits);
     }

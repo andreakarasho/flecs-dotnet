@@ -135,52 +135,81 @@ public sealed partial class World
     // lost the id). Mirrors flecs ecs_observer_desc_t::yield_existing.
 
     // Typed observer — receives ref to component value. T must be a data
-    // component (not a tag). Stacks via multicast on TypeHooks<T>.
-    public void Observer<T>(Event evt, TypeHookAction<T> action, bool yieldExisting = false) where T : struct
+    // component (not a tag). Wrapped into TypeHooks<T>.OnX multicast; the
+    // wrapper builds an EventIter so user code can call it.Ctx<T>().
+    public ObserverHandle Observer<T>(Event evt, EventAction<T> action, bool yieldExisting = false) where T : struct
     {
+        var handle = new ObserverHandle(evt);
         var h = Hooks<T>();
+        TypeHookAction<T> wrapper = (World w, EntityId e, ref T v) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, evt), ref v);
+        };
         switch (evt)
         {
-            case Event.OnAdd: h.OnAdd += action; break;
-            case Event.OnRemove: h.OnRemove += action; break;
-            case Event.OnSet: h.OnSet += action; break;
+            case Event.OnAdd: h.OnAdd += wrapper; break;
+            case Event.OnRemove: h.OnRemove += wrapper; break;
+            case Event.OnSet: h.OnSet += wrapper; break;
         }
-        if (yieldExisting && evt != Event.OnRemove) YieldExistingTypedLocked<T>(action);
+        if (yieldExisting && evt != Event.OnRemove) YieldExistingTypedLocked<T>(wrapper);
+        return handle;
     }
 
     // Tag-style observer (no value ref) for a typed tag/component.
-    public void Observer<T>(Event evt, Action<World, EntityId> action, bool yieldExisting = false) where T : struct
+    public ObserverHandle Observer<T>(Event evt, EventAction action, bool yieldExisting = false) where T : struct
     {
+        var handle = new ObserverHandle(evt);
         Id id;
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, evt));
+        };
         lock (_lock)
         {
             var ent = GetOrRegisterAnyLocked<T>();
             id = (Id)ent;
-            AddIdObserverLocked(id, evt, action);
+            AddIdObserverLocked(id, evt, wrapper);
         }
-        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(id, action);
+        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(id, wrapper);
+        return handle;
     }
 
     // Pair observer (TR, TT). Both auto-registered.
-    public void Observer<TR, TT>(Event evt, Action<World, EntityId> action, bool yieldExisting = false)
+    public ObserverHandle Observer<TR, TT>(Event evt, EventAction action, bool yieldExisting = false)
         where TR : struct where TT : struct
     {
+        var handle = new ObserverHandle(evt);
         Id pair;
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, evt));
+        };
         lock (_lock)
         {
             var rel = GetOrRegisterAnyLocked<TR>();
             var tgt = GetOrRegisterAnyLocked<TT>();
             pair = Id.MakePair(rel, tgt);
-            AddIdObserverLocked(pair, evt, action);
+            AddIdObserverLocked(pair, evt, wrapper);
         }
-        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(pair, action);
+        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(pair, wrapper);
+        return handle;
     }
 
     // Generic Id-keyed observer (covers runtime pairs).
-    public void Observer(Id id, Event evt, Action<World, EntityId> action, bool yieldExisting = false)
+    public ObserverHandle Observer(Id id, Event evt, EventAction action, bool yieldExisting = false)
     {
-        lock (_lock) { AddIdObserverLocked(id, evt, action); }
-        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(id, action);
+        var handle = new ObserverHandle(evt);
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, evt));
+        };
+        lock (_lock) { AddIdObserverLocked(id, evt, wrapper); }
+        if (yieldExisting && evt != Event.OnRemove) YieldExistingIdLocked(id, wrapper);
+        return handle;
     }
 
     // Snapshot tables holding 'id', invoke action for every entity. Done
@@ -292,9 +321,10 @@ public sealed partial class World
     // AND that entity has the other term. Refs handed to the callback may be
     // shared (inherited via IsA) — same semantics as Get<T>. Mirrors flecs
     // filter-style observer with two terms.
-    public void Observer<T1, T2>(Event evt, MultiObserverAction<T1, T2> action)
+    public ObserverHandle Observer<T1, T2>(Event evt, EventAction<T1, T2> action)
         where T1 : struct where T2 : struct
     {
+        var handle = new ObserverHandle(evt);
         Id id1, id2;
         lock (_lock)
         {
@@ -305,15 +335,17 @@ public sealed partial class World
             // so the per-event hot path stays untyped.
             void Dispatch(World w, EntityId e)
             {
+                if (!handle.Enabled) return;
                 ref var c1 = ref w.TryGetRef<T1>(e);
                 ref var c2 = ref w.TryGetRef<T2>(e);
                 if (Unsafe.IsNullRef(ref c1) || Unsafe.IsNullRef(ref c2)) return;
-                action(w, e, ref c1, ref c2);
+                action(new EventIter(w, handle, e, evt), ref c1, ref c2);
             }
             var obs = new MultiObserver(new[] { id1, id2 }, Dispatch);
             AddMultiObsTriggerLocked(evt, id1, obs);
             AddMultiObsTriggerLocked(evt, id2, obs);
         }
+        return handle;
     }
 
     private void AddMultiObsTriggerLocked(Event evt, Id triggerId, MultiObserver obs)
@@ -375,36 +407,52 @@ public sealed partial class World
     //   world.Emit<OnHit, Health>(target);
     //   world.Emit<OnHit, Health>(target, world.ChildOf);  // bubble up
 
-    // Subscribe to (TEvent, T) — typed component or tag target.
-    public void Observer<TEvent, T>(Action<World, EntityId> action, bool yieldExisting = false)
+    // Subscribe to (TEvent, T) — typed component or tag target. The Event slot
+    // on the ObserverHandle is a placeholder (OnAdd) for custom-event observers;
+    // user code should not rely on it.Event inside the body.
+    public ObserverHandle Observer<TEvent, T>(EventAction action, bool yieldExisting = false)
         where TEvent : struct where T : struct
     {
+        var handle = new ObserverHandle(Event.OnAdd);
         EntityId evt;
         Id target;
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, Event.OnAdd));
+        };
         lock (_lock)
         {
             evt = GetOrRegisterAnyLocked<TEvent>();
             target = (Id)GetOrRegisterAnyLocked<T>();
-            AddCustomObsLocked(evt, target, action);
+            AddCustomObsLocked(evt, target, wrapper);
         }
-        if (yieldExisting) YieldExistingIdLocked(target, action);
+        if (yieldExisting) YieldExistingIdLocked(target, wrapper);
+        return handle;
     }
 
     // Subscribe to (TEvent, (TR, TT)) — pair target.
-    public void Observer<TEvent, TR, TT>(Action<World, EntityId> action, bool yieldExisting = false)
+    public ObserverHandle Observer<TEvent, TR, TT>(EventAction action, bool yieldExisting = false)
         where TEvent : struct where TR : struct where TT : struct
     {
+        var handle = new ObserverHandle(Event.OnAdd);
         EntityId evt;
         Id pair;
+        Action<World, EntityId> wrapper = (w, e) =>
+        {
+            if (!handle.Enabled) return;
+            action(new EventIter(w, handle, e, Event.OnAdd));
+        };
         lock (_lock)
         {
             evt = GetOrRegisterAnyLocked<TEvent>();
             var rel = GetOrRegisterAnyLocked<TR>();
             var tgt = GetOrRegisterAnyLocked<TT>();
             pair = Id.MakePair(rel, tgt);
-            AddCustomObsLocked(evt, pair, action);
+            AddCustomObsLocked(evt, pair, wrapper);
         }
-        if (yieldExisting) YieldExistingIdLocked(pair, action);
+        if (yieldExisting) YieldExistingIdLocked(pair, wrapper);
+        return handle;
     }
 
     private void AddCustomObsLocked(EntityId evt, Id target, Action<World, EntityId> action)

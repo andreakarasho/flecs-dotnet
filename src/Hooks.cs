@@ -43,6 +43,57 @@ public sealed class TypeHooks<T> where T : struct
 // ============================================================================
 public enum Event { OnAdd, OnRemove, OnSet }
 
+// Per-dispatch context for an observer. Mirrors the system-side `Iter`
+// shape: world + handle + entity + event tag. Carries the ObserverHandle
+// so user code can read its Ctx via `it.Ctx<T>()`. Stack-only ref struct;
+// constructed by dispatch wrappers and handed to user delegates.
+public readonly ref struct EventIter
+{
+    public World World { get; }
+    public ObserverHandle Observer { get; }
+    public EntityId Entity { get; }
+    public Event Event { get; }
+
+    internal EventIter(World world, ObserverHandle observer, EntityId entity, Event evt)
+    {
+        World = world;
+        Observer = observer;
+        Entity = entity;
+        Event = evt;
+    }
+
+    public T Ctx<T>()
+    {
+        if (Observer.Ctx is T t) return t;
+        ThrowHelper.SystemCtxWrongType(typeof(T));
+        return default!;
+    }
+}
+
+// Observer body delegates. Mirror flecs.NET observer callback shape.
+public delegate void EventAction(EventIter it);
+public delegate void EventAction<T1>(EventIter it, ref T1 c1) where T1 : struct;
+public delegate void EventAction<T1, T2>(EventIter it, ref T1 c1, ref T2 c2)
+    where T1 : struct where T2 : struct;
+
+// Observer registration handle. Counterpart to SystemHandle: carries a Ctx
+// slot readable inside the body via EventIter.Ctx<T>(). Returned by every
+// World.Observer overload; configure via the fluent Set* methods.
+public sealed class ObserverHandle
+{
+    // Event filter the observer listens on. For custom-event observers
+    // (Observer<TEvent, ...>) this slot stays at OnAdd as a placeholder; the
+    // actual event is the TEvent type, dispatched via Emit.
+    public Event Event { get; }
+    public bool Enabled { get; private set; } = true;
+    public object? Ctx { get; private set; }
+
+    internal ObserverHandle(Event evt) { Event = evt; }
+
+    public ObserverHandle SetCtx(object? ctx) { Ctx = ctx; return this; }
+    public ObserverHandle SetEnabled(bool v) { Enabled = v; return this; }
+}
+
 // ============================================================================
 // Delete policy — fate of holders when a referenced id is deleted.
 //   Remove — drop the id from holders (default for components, OnDelete).
@@ -61,12 +112,9 @@ internal sealed class IdHooks
     public Action<World, EntityId>? OnSet;
 }
 
-// Multi-term observer. Fires when an event hits any of its term ids AND the
-// entity satisfies all other terms (via Has — Self+Up). Mirrors flecs
-// filter-style observers for the common "react when shape forms" pattern.
-public delegate void MultiObserverAction<T1, T2>(World world, EntityId entity, ref T1 c1, ref T2 c2)
-    where T1 : struct where T2 : struct;
-
+// Multi-term observer carrier. Fires when an event hits any of its term ids
+// AND the entity satisfies all other terms (via Has — Self+Up). Mirrors
+// flecs filter-style observers for the "react when shape forms" pattern.
 internal sealed class MultiObserver
 {
     public readonly Id[] Ids;

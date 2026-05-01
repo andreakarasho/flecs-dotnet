@@ -16,7 +16,7 @@ public class CustomEventTests
         var w = new World();
         int hits = 0;
         EntityId seen = default;
-        w.Observer<OnHit, Position>((W, e) => { hits++; seen = e; });
+        w.Observer<OnHit, Position>(it => { hits++; seen = it.Entity; });
         var target = w.CreateEntity();
         w.Emit<OnHit, Position>(target);
         Assert.Equal(1, hits);
@@ -28,7 +28,7 @@ public class CustomEventTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<OnHit, Position>((W, e) => hits++);
+        w.Observer<OnHit, Position>(it => hits++);
         Assert.Equal(0, hits);
     }
 
@@ -37,8 +37,8 @@ public class CustomEventTests
     {
         var w = new World();
         int hitCount = 0, healCount = 0;
-        w.Observer<OnHit, Position>((W, e) => hitCount++);
-        w.Observer<OnHeal, Position>((W, e) => healCount++);
+        w.Observer<OnHit, Position>(it => hitCount++);
+        w.Observer<OnHeal, Position>(it => healCount++);
         var target = w.CreateEntity();
         w.Emit<OnHit, Position>(target);
         Assert.Equal(1, hitCount);
@@ -50,7 +50,7 @@ public class CustomEventTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<OnHit, Position>((W, e) => hits++);
+        w.Observer<OnHit, Position>(it => hits++);
         var target = w.CreateEntity();
         w.Emit<OnHit, Velocity>(target); // different target type
         Assert.Equal(0, hits);
@@ -61,8 +61,8 @@ public class CustomEventTests
     {
         var w = new World();
         int a = 0, b = 0;
-        w.Observer<OnHit, Position>((W, e) => a++);
-        w.Observer<OnHit, Position>((W, e) => b++);
+        w.Observer<OnHit, Position>(it => a++);
+        w.Observer<OnHit, Position>(it => b++);
         w.Emit<OnHit, Position>(w.CreateEntity());
         Assert.Equal(1, a);
         Assert.Equal(1, b);
@@ -73,7 +73,7 @@ public class CustomEventTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<OnHit, Likes, Apple>((W, e) => hits++);
+        w.Observer<OnHit, Likes, Apple>(it => hits++);
         var target = w.CreateEntity();
         w.Emit<OnHit, Likes, Apple>(target);
         Assert.Equal(1, hits);
@@ -96,7 +96,7 @@ public class CustomEventTests
         w.Set(a, new Position(0, 0));
         w.Set(b, new Position(1, 1));
         var seen = new HashSet<uint>();
-        w.Observer<OnHit, Position>((W, e) => seen.Add(e.Id), yieldExisting: true);
+        w.Observer<OnHit, Position>(it => seen.Add(it.Entity.Id), yieldExisting: true);
         Assert.Equal(2, seen.Count);
     }
 
@@ -106,7 +106,7 @@ public class CustomEventTests
         var w = new World();
         w.Component<Position>();
         int hits = 0;
-        w.Observer<OnHit, Position>((W, e) => hits++);
+        w.Observer<OnHit, Position>(it => hits++);
         // Builtin OnAdd does NOT fire custom OnHit.
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
@@ -117,7 +117,7 @@ public class CustomEventTests
     public void EventType_AutoRegistersAsTagStyleEntity()
     {
         var w = new World();
-        w.Observer<OnSpawn, Position>((W, e) => { });
+        w.Observer<OnSpawn, Position>(it => { });
         // OnSpawn registered as an entity (tag-style).
         Assert.True(w.IdOf<OnSpawn>().Component != 0u);
     }

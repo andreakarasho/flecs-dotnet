@@ -159,7 +159,7 @@ public class TraitTests
         var p2 = w.CreateEntity();
         var c = w.CreateEntity();
         // Subscribe to specific (ChildOf, p1) pair removal — builtin OnRemove.
-        w.Observer(Id.MakePair(w.ChildOf, p1), Event.OnRemove, (W, e) => onRemove++);
+        w.Observer(Id.MakePair(w.ChildOf, p1), Event.OnRemove, it => onRemove++);
         w.SetParent(c, p1);
         w.SetParent(c, p2); // exclusive: removes (ChildOf, p1) → fires OnRemove
         Assert.Equal(1, onRemove);

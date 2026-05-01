@@ -107,7 +107,7 @@ public class DeletePolicyTests
         var w = new World();
         w.Tag<TagA>();
         int onRemoveCount = 0;
-        w.Observer<TagA>(Event.OnRemove, (W, e) => onRemoveCount++);
+        w.Observer<TagA>(Event.OnRemove, it => onRemoveCount++);
         var p = w.CreateEntity();
         var c1 = w.CreateEntity(); w.Add<TagA>(c1); w.SetParent(c1, p);
         var c2 = w.CreateEntity(); w.Add<TagA>(c2); w.SetParent(c2, p);

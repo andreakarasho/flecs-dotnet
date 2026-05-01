@@ -10,7 +10,7 @@ public class ObserverTests
     {
         var w = new World();
         var seen = new List<uint>();
-        w.Observer<Position>(Event.OnAdd, (World W, EntityId e, ref Position _) => seen.Add(e.Id));
+        w.Observer<Position>(Event.OnAdd, (EventIter it, ref Position _) => seen.Add(it.Entity.Id));
         var a = w.CreateEntity();
         var b = w.CreateEntity();
         w.Set(a, new Position(0, 0));
@@ -23,7 +23,7 @@ public class ObserverTests
     {
         var w = new World();
         var values = new List<float>();
-        w.Observer<Position>(Event.OnSet, (World W, EntityId e, ref Position p) => values.Add(p.X));
+        w.Observer<Position>(Event.OnSet, (EventIter it, ref Position p) => values.Add(p.X));
         var e = w.CreateEntity();
         w.Set(e, new Position(1, 0));
         w.Set(e, new Position(2, 0));
@@ -35,8 +35,8 @@ public class ObserverTests
     {
         var w = new World();
         int a = 0, b = 0;
-        w.Observer<Position>(Event.OnAdd, (World W, EntityId e, ref Position _) => a++);
-        w.Observer<Position>(Event.OnAdd, (World W, EntityId e, ref Position _) => b++);
+        w.Observer<Position>(Event.OnAdd, (EventIter it, ref Position _) => a++);
+        w.Observer<Position>(Event.OnAdd, (EventIter it, ref Position _) => b++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         Assert.Equal(1, a);
@@ -49,7 +49,7 @@ public class ObserverTests
         var w = new World();
         w.Tag<TagA>();
         int hits = 0;
-        w.Observer<TagA>(Event.OnAdd, (W, e) => hits++);
+        w.Observer<TagA>(Event.OnAdd, it => hits++);
         var e1 = w.CreateEntity();
         var e2 = w.CreateEntity();
         w.Add<TagA>(e1);
@@ -63,7 +63,7 @@ public class ObserverTests
         var w = new World();
         w.Tag<TagA>();
         int hits = 0;
-        w.Observer<TagA>(Event.OnRemove, (W, e) => hits++);
+        w.Observer<TagA>(Event.OnRemove, it => hits++);
         var e = w.CreateEntity();
         w.Add<TagA>(e);
         w.Remove<TagA>(e);
@@ -75,7 +75,7 @@ public class ObserverTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Likes, Apple>(Event.OnAdd, (W, e) => hits++);
+        w.Observer<Likes, Apple>(Event.OnAdd, it => hits++);
         var e = w.CreateEntity();
         w.Add<Likes, Apple>(e);
         Assert.Equal(1, hits);
@@ -87,7 +87,7 @@ public class ObserverTests
         var w = new World();
         w.Tag<TagA>();
         int hits = 0;
-        w.Observer<TagA>(Event.OnRemove, (W, e) => hits++);
+        w.Observer<TagA>(Event.OnRemove, it => hits++);
         var e = w.CreateEntity();
         w.Add<TagA>(e);
         w.Delete(e);
@@ -104,7 +104,7 @@ public class ObserverTests
         // OnAdd fires at component-add time, before Set writes the value —
         // so refs reflect default-init for the just-added term. We only
         // assert on hit count here; OnSet test covers value-aware dispatch.
-        w.Observer<Position, Velocity>(Event.OnAdd, (World W, EntityId e, ref Position p, ref Velocity v) => hits++);
+        w.Observer<Position, Velocity>(Event.OnAdd, (EventIter it, ref Position p, ref Velocity v) => hits++);
         var e = w.CreateEntity();
         w.Set(e, new Position(10, 20));
         Assert.Equal(0, hits);                    // only Position so far
@@ -118,7 +118,7 @@ public class ObserverTests
         var w = new World();
         int hits = 0;
         float lastX = 0f, lastDx = 0f;
-        w.Observer<Position, Velocity>(Event.OnSet, (World W, EntityId e, ref Position p, ref Velocity v) =>
+        w.Observer<Position, Velocity>(Event.OnSet, (EventIter it, ref Position p, ref Velocity v) =>
         {
             hits++;
             lastX = p.X;
@@ -137,7 +137,7 @@ public class ObserverTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Position, Velocity>(Event.OnAdd, (World W, EntityId e, ref Position _, ref Velocity _) => hits++);
+        w.Observer<Position, Velocity>(Event.OnAdd, (EventIter it, ref Position _, ref Velocity _) => hits++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         Assert.Equal(0, hits);
@@ -148,7 +148,7 @@ public class ObserverTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Position, Velocity>(Event.OnAdd, (World W, EntityId e, ref Position _, ref Velocity _) => hits++);
+        w.Observer<Position, Velocity>(Event.OnAdd, (EventIter it, ref Position _, ref Velocity _) => hits++);
         // Order 1: Position then Velocity → Velocity add fires.
         var e1 = w.CreateEntity();
         w.Set(e1, new Position(0, 0));
@@ -166,7 +166,7 @@ public class ObserverTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Position, Velocity>(Event.OnSet, (World W, EntityId e, ref Position _, ref Velocity _) => hits++);
+        w.Observer<Position, Velocity>(Event.OnSet, (EventIter it, ref Position _, ref Velocity _) => hits++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));   // OnSet fires for Position; entity lacks Velocity → no dispatch
         Assert.Equal(0, hits);
@@ -181,7 +181,7 @@ public class ObserverTests
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Position, Velocity>(Event.OnRemove, (World W, EntityId e, ref Position _, ref Velocity _) => hits++);
+        w.Observer<Position, Velocity>(Event.OnRemove, (EventIter it, ref Position _, ref Velocity _) => hits++);
         var e = w.CreateEntity();
         w.Set(e, new Position(0, 0));
         w.Set(e, new Velocity(0, 0));
@@ -190,12 +190,46 @@ public class ObserverTests
         Assert.Equal(1, hits);
     }
 
+    private sealed class ObsCtx { public int Sum; }
+
+    [Fact]
+    public void Observer_Ctx_ReadInsideBody()
+    {
+        var w = new World();
+        var state = new ObsCtx();
+        w.Observer<Position>(Event.OnSet, (EventIter it, ref Position p) =>
+        {
+            it.Ctx<ObsCtx>().Sum += (int)p.X;
+        }).SetCtx(state);
+        var e = w.CreateEntity();
+        w.Set(e, new Position(10, 0));
+        w.Set(e, new Position(5, 0));
+        Assert.Equal(15, state.Sum);
+    }
+
+    [Fact]
+    public void Observer_SetEnabled_GatesDispatch()
+    {
+        var w = new World();
+        int hits = 0;
+        var h = w.Observer<Position>(Event.OnSet, (EventIter it, ref Position _) => hits++);
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        Assert.Equal(1, hits);
+        h.SetEnabled(false);
+        w.Set(e, new Position(1, 0));
+        Assert.Equal(1, hits);
+        h.SetEnabled(true);
+        w.Set(e, new Position(2, 0));
+        Assert.Equal(2, hits);
+    }
+
     [Fact]
     public void MultiObserver_RespectsIsAInheritance()
     {
         var w = new World();
         int hits = 0;
-        w.Observer<Position, Velocity>(Event.OnAdd, (World W, EntityId e, ref Position _, ref Velocity _) => hits++);
+        w.Observer<Position, Velocity>(Event.OnAdd, (EventIter it, ref Position _, ref Velocity _) => hits++);
         var prefab = w.CreateEntity();
         w.Set(prefab, new Position(7, 7));
         var inst = w.CreateEntity();
