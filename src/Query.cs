@@ -24,16 +24,15 @@ internal struct TermTraversal
 public abstract class QueryBase
 {
     internal readonly World _world;
-    protected internal Id[] _with;
-    protected internal Id[] _without = Array.Empty<Id>();
-    protected internal List<Id[]>? _orGroups;
-    protected internal readonly List<Table> _matched = new();
-    protected internal int _matchedUpTo;
+    internal Id[] _with;
+    internal Id[] _without = Array.Empty<Id>();
+    internal List<Id[]>? _orGroups;
+    internal readonly List<Table> _matched = new();
+    internal int _matchedUpTo;
     // Opt-in: when true, match also includes tables whose entities satisfy
-    // 'with' terms via Self+Up(IsA). Each callbacks resolve shared refs from
-    // the ancestor archetype. Run/Iter remain literal — inherited-only tables
-    // are skipped at Run time. Mirrors flecs query inheritance semantics.
-    protected internal bool _inherited;
+    // 'with' terms via Self+Up(IsA). RowEnumerator resolves shared refs from
+    // the ancestor archetype. Mirrors flecs query inheritance semantics.
+    internal bool _inherited;
     // Per-term traversal overrides. An entry wins over _inherited for that
     // specific term; absent entries fall back to _inherited (IsA) or literal.
     internal Dictionary<Id, TermTraversal>? _termTraversals;
@@ -105,12 +104,13 @@ public abstract class QueryBase
         }
     }
 
-    // Write-set: every required term not flagged read.
+    // Write-set: every required term not flagged read. Returned array is a
+    // fresh copy — caller may not mutate query state through it.
     public Id[] WriteIds
     {
         get
         {
-            if (_reads == null || _reads.Count == 0) return _with;
+            if (_reads == null || _reads.Count == 0) return (Id[])_with.Clone();
             var list = new List<Id>(_with.Length);
             for (int i = 0; i < _with.Length; i++)
                 if (!_reads.Contains(_with[i])) list.Add(_with[i]);
@@ -118,25 +118,25 @@ public abstract class QueryBase
         }
     }
 
-    protected void MarkRead(Id id)
+    private protected void MarkRead(Id id)
     {
         (_reads ??= new HashSet<Id>()).Add(id);
     }
 
-    protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
+    private protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
-    protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); _unionWith = null; }
+    private protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); _unionWith = null; }
 
-    protected void AddWith(Id id) { _with = QueryUtil.AppendSorted(_with, id); Reset(); }
-    protected void AddWithout(Id id) { _without = QueryUtil.AppendSorted(_without, id); Reset(); }
-    protected void AddOr(Id[] group) { (_orGroups ??= new List<Id[]>()).Add(group); Reset(); }
-    protected void SetInherited()
+    private protected void AddWith(Id id) { _with = QueryUtil.AppendSorted(_with, id); Reset(); }
+    private protected void AddWithout(Id id) { _without = QueryUtil.AppendSorted(_without, id); Reset(); }
+    private protected void AddOr(Id[] group) { (_orGroups ??= new List<Id[]>()).Add(group); Reset(); }
+    private protected void SetInherited()
     {
         if (!_inherited) { _inherited = true; _anyInheritance = true; Reset(); }
     }
 
     // Add per-term traversal override. Wins over _inherited for this term.
-    protected void SetTermTraversal(Id id, uint relation, int maxDepth)
+    private protected void SetTermTraversal(Id id, uint relation, int maxDepth)
     {
         _termTraversals ??= new Dictionary<Id, TermTraversal>();
         _termTraversals[id] = new TermTraversal { Relation = relation, MaxDepth = maxDepth };
@@ -144,14 +144,14 @@ public abstract class QueryBase
         Reset();
     }
 
-    // Enable depth-ordered iteration. Subsequent Each/Run/enum visits matched
+    // Enable depth-ordered iteration. Subsequent RowEnumerator visits matched
     // tables in ascending RelationDepth order — ancestors before descendants.
-    protected void SetCascade(uint relation)
+    private protected void SetCascade(uint relation)
     {
         if (_cascadeRel != relation) { _cascadeRel = relation; Reset(); }
     }
 
-    protected internal void Rematch()
+    internal void Rematch()
     {
         var tables = _world._tablesById;
         var worldForInherit = _anyInheritance ? _world : null;
@@ -189,7 +189,8 @@ public abstract class QueryBase
 
     public int MatchedTableCount { get { Rematch(); return _matched.Count; } }
 
-    // True if any matched table changed since last Each / Run / MarkObserved.
+    // True if any matched table changed since last RowEnumerator dispose
+    // (which calls MarkObserved).
     public bool IsChanged()
     {
         Rematch();
@@ -203,7 +204,7 @@ public abstract class QueryBase
         return false;
     }
 
-    protected void MarkObserved()
+    internal void MarkObserved()
     {
         var dict = _lastVersion ??= new Dictionary<int, int>();
         for (int i = 0; i < _matched.Count; i++)
@@ -212,10 +213,6 @@ public abstract class QueryBase
             dict[t.Id] = t.Version;
         }
     }
-
-    // Internal hook for ref-struct enumerators that can't call protected
-    // members directly across types.
-    internal void MarkObservedInternal() => MarkObserved();
 
     // Resolve the CanToggle bitset for term 'id' on table 't'. Returns null
     // when the term is not toggleable, the table has no bitsets, or the source

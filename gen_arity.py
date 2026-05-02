@@ -345,7 +345,7 @@ public ref struct {R}
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) {F}.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }}
 }}

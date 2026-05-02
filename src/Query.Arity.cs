@@ -226,7 +226,7 @@ public ref struct RowEnumerator<T1>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -462,7 +462,7 @@ public ref struct RowEnumerator<T1, T2>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -711,7 +711,7 @@ public ref struct RowEnumerator<T1, T2, T3>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -961,7 +961,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -1223,7 +1223,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -1497,7 +1497,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -1783,7 +1783,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -2081,7 +2081,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -2391,7 +2391,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -2713,7 +2713,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -3047,7 +3047,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -3393,7 +3393,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -3751,7 +3751,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -4121,7 +4121,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -4503,7 +4503,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
@@ -4897,7 +4897,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
         if (_disposed) return;
         _disposed = true;
         if (_filter != null) FilterState<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>.Return(_filter);
-        _query.MarkObservedInternal();
+        _query.MarkObserved();
         _defer.Dispose();
     }
 }
