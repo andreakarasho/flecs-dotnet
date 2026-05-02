@@ -360,6 +360,14 @@ public sealed partial class World
         }
     }
 
+    // ---- Entity (fluent wrapper) ----
+    // world.Entity()         — create a new entity, return fluent handle.
+    // world.Entity(name)     — create + SetName.
+    // world.Entity(EntityId) — wrap an existing handle.
+    public Entity Entity() => new(this, CreateEntity());
+    public Entity Entity(string name) { var e = CreateEntity(); SetName(e, name); return new Entity(this, e); }
+    public Entity Entity(EntityId id) => new(this, id);
+
     // Auto-parent newly-created entity to current scope, if any.
     private void ApplyScopeLocked(EntityId e)
     {
