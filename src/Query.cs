@@ -92,8 +92,10 @@ public abstract class QueryBase
     // conflicts between concurrent systems. Mirrors flecs term inout=In.
     internal HashSet<Id>? _reads;
 
-    // Read-set as Id[] (allocated lazily for pipeline analysis).
-    public Id[] ReadIds
+    // Read-set as Id[] (allocated lazily for pipeline analysis). Internal —
+    // pipeline DAG (World.Features.cs) consumes these to populate
+    // SystemHandle.SetReads/SetWrites; not part of the public query surface.
+    internal Id[] ReadIds
     {
         get
         {
@@ -108,7 +110,7 @@ public abstract class QueryBase
 
     // Write-set: every required term not flagged read. Returned array is a
     // fresh copy — caller may not mutate query state through it.
-    public Id[] WriteIds
+    internal Id[] WriteIds
     {
         get
         {

@@ -4,7 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Flecs</AssemblyName>
     <RootNamespace>Flecs</RootNamespace>
   </PropertyGroup>
@@ -16,6 +15,10 @@
     <Compile Remove="obj/**" />
     <None Remove="examples/**" />
     <None Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="tests" />
   </ItemGroup>
 
 </Project>
