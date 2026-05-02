@@ -37,9 +37,11 @@ public abstract class QueryBase
     // specific term; absent entries fall back to _inherited (IsA) or literal.
     internal Dictionary<Id, TermTraversal>? _termTraversals;
     // Cascade ordering relation. 0 = no cascade. After Rematch, _matched is
-    // sorted by RelationDepth ascending (ancestors first). Mirrors flecs
-    // ecs_query_t cascade. Typical use: ChildOf for transform propagation.
+    // sorted by RelationDepth (asc by default; desc when _cascadeDesc).
+    // Mirrors flecs ecs_query_t cascade. Typical use: ChildOf for transform
+    // propagation. Desc useful for bottom-up traversals (children first).
     internal uint _cascadeRel;
+    internal bool _cascadeDesc;
     private Dictionary<int, int>? _lastVersion;
 
     // True iff matching considers anything beyond literal Self for any term.
@@ -123,6 +125,14 @@ public abstract class QueryBase
         (_reads ??= new HashSet<Id>()).Add(id);
     }
 
+    // Inverse of MarkRead. Default already treats every required term as a
+    // writer, so this matters only after a prior Read<T> on the same id —
+    // typical use is symmetry / explicitness, e.g. q.Write<Pos>().
+    private protected void MarkWrite(Id id)
+    {
+        _reads?.Remove(id);
+    }
+
     private protected QueryBase(World w, Id[] with) { _world = w; _with = with; }
 
     private protected void Reset() { _matched.Clear(); _matchedUpTo = 0; _lastVersion?.Clear(); _unionWith = null; }
@@ -149,6 +159,13 @@ public abstract class QueryBase
     private protected void SetCascade(uint relation)
     {
         if (_cascadeRel != relation) { _cascadeRel = relation; Reset(); }
+    }
+
+    // Reverse cascade order (descendants before ancestors). Only meaningful
+    // alongside SetCascade. Mirrors flecs query desc() flag.
+    private protected void SetCascadeDesc()
+    {
+        if (!_cascadeDesc) { _cascadeDesc = true; Reset(); }
     }
 
     internal void Rematch()
@@ -183,7 +200,10 @@ public abstract class QueryBase
                                    : _world.RelationDepth(t.Entities[0], _cascadeRel);
             pairs[i] = (t, d);
         }
-        Array.Sort(pairs, (a, b) => a.depth.CompareTo(b.depth));
+        if (_cascadeDesc)
+            Array.Sort(pairs, (a, b) => b.depth.CompareTo(a.depth));
+        else
+            Array.Sort(pairs, (a, b) => a.depth.CompareTo(b.depth));
         for (int i = 0; i < n; i++) _matched[i] = pairs[i].t;
     }
 

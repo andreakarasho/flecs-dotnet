@@ -55,9 +55,14 @@ public sealed class Query<T1> : QueryBase
     }
 
     public Query<T1> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1> With(Id id) { AddWith(id); return this; }
     public Query<T1> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1> Without(Id id) { AddWithout(id); return this; }
     public Query<T1> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
@@ -75,6 +80,7 @@ public sealed class Query<T1> : QueryBase
 
     public Query<T1> Inherited() { SetInherited(); return this; }
     public Query<T1> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -94,6 +100,8 @@ public sealed class Query<T1> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1> GetEnumerator() => new(this);
@@ -279,9 +287,14 @@ public sealed class Query<T1, T2> : QueryBase
     }
 
     public Query<T1, T2> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
@@ -300,6 +313,7 @@ public sealed class Query<T1, T2> : QueryBase
 
     public Query<T1, T2> Inherited() { SetInherited(); return this; }
     public Query<T1, T2> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -319,6 +333,8 @@ public sealed class Query<T1, T2> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2> GetEnumerator() => new(this);
@@ -516,9 +532,14 @@ public sealed class Query<T1, T2, T3> : QueryBase
     }
 
     public Query<T1, T2, T3> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
@@ -538,6 +559,7 @@ public sealed class Query<T1, T2, T3> : QueryBase
 
     public Query<T1, T2, T3> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -557,6 +579,8 @@ public sealed class Query<T1, T2, T3> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3> GetEnumerator() => new(this);
@@ -745,7 +769,7 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -766,17 +790,35 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
     }
 
     public Query<T1, T2, T3, T4> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, or T4");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -796,6 +838,8 @@ public sealed class Query<T1, T2, T3, T4> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4> GetEnumerator() => new(this);
@@ -826,7 +870,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -935,16 +979,16 @@ public ref struct RowEnumerator<T1, T2, T3, T4>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -995,7 +1039,7 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -1017,17 +1061,36 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, or T5");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1047,6 +1110,8 @@ public sealed class Query<T1, T2, T3, T4, T5> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5> GetEnumerator() => new(this);
@@ -1078,7 +1143,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -1194,19 +1259,19 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -1257,7 +1322,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -1280,17 +1345,37 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5, T6> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, or T6");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1310,6 +1395,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6> GetEnumerator() => new(this);
@@ -1342,7 +1429,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -1465,22 +1552,22 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -1531,7 +1618,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -1555,17 +1642,38 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, or T7");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1585,6 +1693,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7> GetEnumerator() => new(this);
@@ -1618,7 +1728,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -1748,25 +1858,25 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -1817,7 +1927,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -1842,17 +1952,39 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, or T8");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -1872,6 +2004,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8> GetEnumerator() => new(this);
@@ -1906,7 +2040,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -2043,28 +2177,28 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -2115,7 +2249,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -2141,17 +2275,40 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, or T9");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -2171,6 +2328,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9> GetEnumerator() => new(this);
@@ -2206,7 +2365,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -2350,31 +2509,31 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -2425,7 +2584,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -2452,17 +2611,41 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, or T10");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -2482,6 +2665,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> GetEnumerator() => new(this);
@@ -2518,7 +2703,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -2669,34 +2854,34 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -2747,7 +2932,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryB
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -2775,17 +2960,42 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryB
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, or T11");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -2805,6 +3015,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryB
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> GetEnumerator() => new(this);
@@ -2842,7 +3054,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -3000,37 +3212,37 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -3081,7 +3293,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Q
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct where T12 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional, _t12Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -3110,17 +3322,43 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Q
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        if (typeof(T) == typeof(T12)) { if (!_t12Optional) { _t12Optional = true; _with = QueryUtil.Remove(_with, _c12); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, or T12");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -3140,6 +3378,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Q
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> GetEnumerator() => new(this);
@@ -3178,7 +3418,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional || q._t12Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -3343,40 +3583,40 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c12)) { f.Sparse12 = (SparseStorage<T12>)w._sparseStorage[_query._c12.Component]; f.Col12 = null; f.Shared12 = -1; f.Bs12 = null; }
-            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
+            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null && !_query._t12Optional) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -3427,7 +3667,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct where T12 : struct where T13 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12, _c13;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional, _t12Optional, _t13Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -3457,17 +3697,44 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        if (typeof(T) == typeof(T12)) { if (!_t12Optional) { _t12Optional = true; _with = QueryUtil.Remove(_with, _c12); Reset(); } return this; }
+        if (typeof(T) == typeof(T13)) { if (!_t13Optional) { _t13Optional = true; _with = QueryUtil.Remove(_with, _c13); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, or T13");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -3487,6 +3754,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> GetEnumerator() => new(this);
@@ -3526,7 +3795,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional || q._t12Optional || q._t13Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -3698,43 +3967,43 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c12)) { f.Sparse12 = (SparseStorage<T12>)w._sparseStorage[_query._c12.Component]; f.Col12 = null; f.Shared12 = -1; f.Bs12 = null; }
-            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
+            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null && !_query._t12Optional) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c13)) { f.Sparse13 = (SparseStorage<T13>)w._sparseStorage[_query._c13.Component]; f.Col13 = null; f.Shared13 = -1; f.Bs13 = null; }
-            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
+            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null && !_query._t13Optional) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -3785,7 +4054,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct where T12 : struct where T13 : struct where T14 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12, _c13, _c14;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional, _t12Optional, _t13Optional, _t14Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -3816,17 +4085,45 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        if (typeof(T) == typeof(T12)) { if (!_t12Optional) { _t12Optional = true; _with = QueryUtil.Remove(_with, _c12); Reset(); } return this; }
+        if (typeof(T) == typeof(T13)) { if (!_t13Optional) { _t13Optional = true; _with = QueryUtil.Remove(_with, _c13); Reset(); } return this; }
+        if (typeof(T) == typeof(T14)) { if (!_t14Optional) { _t14Optional = true; _with = QueryUtil.Remove(_with, _c14); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, or T14");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -3846,6 +4143,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> GetEnumerator() => new(this);
@@ -3886,7 +4185,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional || q._t12Optional || q._t13Optional || q._t14Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -4065,46 +4364,46 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c12)) { f.Sparse12 = (SparseStorage<T12>)w._sparseStorage[_query._c12.Component]; f.Col12 = null; f.Shared12 = -1; f.Bs12 = null; }
-            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
+            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null && !_query._t12Optional) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c13)) { f.Sparse13 = (SparseStorage<T13>)w._sparseStorage[_query._c13.Component]; f.Col13 = null; f.Shared13 = -1; f.Bs13 = null; }
-            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
+            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null && !_query._t13Optional) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c14)) { f.Sparse14 = (SparseStorage<T14>)w._sparseStorage[_query._c14.Component]; f.Col14 = null; f.Shared14 = -1; f.Bs14 = null; }
-            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
+            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null && !_query._t14Optional) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -4155,7 +4454,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct where T12 : struct where T13 : struct where T14 : struct where T15 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12, _c13, _c14, _c15;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional, _t12Optional, _t13Optional, _t14Optional, _t15Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -4187,17 +4486,46 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        if (typeof(T) == typeof(T12)) { if (!_t12Optional) { _t12Optional = true; _with = QueryUtil.Remove(_with, _c12); Reset(); } return this; }
+        if (typeof(T) == typeof(T13)) { if (!_t13Optional) { _t13Optional = true; _with = QueryUtil.Remove(_with, _c13); Reset(); } return this; }
+        if (typeof(T) == typeof(T14)) { if (!_t14Optional) { _t14Optional = true; _with = QueryUtil.Remove(_with, _c14); Reset(); } return this; }
+        if (typeof(T) == typeof(T15)) { if (!_t15Optional) { _t15Optional = true; _with = QueryUtil.Remove(_with, _c15); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, or T15");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -4217,6 +4545,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> GetEnumerator() => new(this);
@@ -4258,7 +4588,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional || q._t12Optional || q._t13Optional || q._t14Optional || q._t15Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14) || q._world.IsCanToggleId(q._c15)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14) || q._world.IsSparseId(q._c15)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -4444,49 +4774,49 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c12)) { f.Sparse12 = (SparseStorage<T12>)w._sparseStorage[_query._c12.Component]; f.Col12 = null; f.Shared12 = -1; f.Bs12 = null; }
-            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
+            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null && !_query._t12Optional) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c13)) { f.Sparse13 = (SparseStorage<T13>)w._sparseStorage[_query._c13.Component]; f.Col13 = null; f.Shared13 = -1; f.Bs13 = null; }
-            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
+            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null && !_query._t13Optional) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c14)) { f.Sparse14 = (SparseStorage<T14>)w._sparseStorage[_query._c14.Component]; f.Col14 = null; f.Shared14 = -1; f.Bs14 = null; }
-            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
+            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null && !_query._t14Optional) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c15)) { f.Sparse15 = (SparseStorage<T15>)w._sparseStorage[_query._c15.Component]; f.Col15 = null; f.Shared15 = -1; f.Bs15 = null; }
-            else { f.Sparse15 = null; var (c, s) = _query.ResolveSource<T15>(t, _query._c15); if (c == null) skip = true; else { f.Col15 = c; f.Shared15 = s; f.Bs15 = _query.ResolveBitset(t, _query._c15, s); } }
+            else { f.Sparse15 = null; var (c, s) = _query.ResolveSource<T15>(t, _query._c15); if (c == null && !_query._t15Optional) skip = true; else { f.Col15 = c; f.Shared15 = s; f.Bs15 = _query.ResolveBitset(t, _query._c15, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;
@@ -4537,7 +4867,7 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     where T1 : struct where T2 : struct where T3 : struct where T4 : struct where T5 : struct where T6 : struct where T7 : struct where T8 : struct where T9 : struct where T10 : struct where T11 : struct where T12 : struct where T13 : struct where T14 : struct where T15 : struct where T16 : struct
 {
     internal readonly Id _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12, _c13, _c14, _c15, _c16;
-
+    internal bool _t1Optional, _t2Optional, _t3Optional, _t4Optional, _t5Optional, _t6Optional, _t7Optional, _t8Optional, _t9Optional, _t10Optional, _t11Optional, _t12Optional, _t13Optional, _t14Optional, _t15Optional, _t16Optional;
 
     private static Id[] BuildWith(World w)
     {
@@ -4570,17 +4900,47 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> With<T>() where T : struct { AddWith(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> With<TR, TT>() where TR : struct where TT : struct { AddWith(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> With<TR>(EntityId target) where TR : struct { AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> With(EntityId relation, EntityId target) { AddWith(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> With(Id id) { AddWith(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Without<T>() where T : struct { AddWithout(_world.IdOf<T>()); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Without<TR, TT>() where TR : struct where TT : struct { AddWithout(_world.Pair<TR, TT>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Without<TR>(EntityId target) where TR : struct { AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Without(EntityId relation, EntityId target) { AddWithout(_world.Pair(relation, target)); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Without(Id id) { AddWithout(id); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or<TA, TB>() where TA : struct where TB : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>() }); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or<TA, TB, TC>() where TA : struct where TB : struct where TC : struct
     { AddOr(new[] { _world.IdOf<TA>(), _world.IdOf<TB>(), _world.IdOf<TC>() }); return this; }
 
+    // Mark a typed slot as optional. Match ignores it; RowEnumerator yields
+    // Unsafe.NullRef<T>() for absent rows. Caller checks via Unsafe.IsNullRef.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Optional<T>() where T : struct
+    {
+        if (typeof(T) == typeof(T1)) { if (!_t1Optional) { _t1Optional = true; _with = QueryUtil.Remove(_with, _c1); Reset(); } return this; }
+        if (typeof(T) == typeof(T2)) { if (!_t2Optional) { _t2Optional = true; _with = QueryUtil.Remove(_with, _c2); Reset(); } return this; }
+        if (typeof(T) == typeof(T3)) { if (!_t3Optional) { _t3Optional = true; _with = QueryUtil.Remove(_with, _c3); Reset(); } return this; }
+        if (typeof(T) == typeof(T4)) { if (!_t4Optional) { _t4Optional = true; _with = QueryUtil.Remove(_with, _c4); Reset(); } return this; }
+        if (typeof(T) == typeof(T5)) { if (!_t5Optional) { _t5Optional = true; _with = QueryUtil.Remove(_with, _c5); Reset(); } return this; }
+        if (typeof(T) == typeof(T6)) { if (!_t6Optional) { _t6Optional = true; _with = QueryUtil.Remove(_with, _c6); Reset(); } return this; }
+        if (typeof(T) == typeof(T7)) { if (!_t7Optional) { _t7Optional = true; _with = QueryUtil.Remove(_with, _c7); Reset(); } return this; }
+        if (typeof(T) == typeof(T8)) { if (!_t8Optional) { _t8Optional = true; _with = QueryUtil.Remove(_with, _c8); Reset(); } return this; }
+        if (typeof(T) == typeof(T9)) { if (!_t9Optional) { _t9Optional = true; _with = QueryUtil.Remove(_with, _c9); Reset(); } return this; }
+        if (typeof(T) == typeof(T10)) { if (!_t10Optional) { _t10Optional = true; _with = QueryUtil.Remove(_with, _c10); Reset(); } return this; }
+        if (typeof(T) == typeof(T11)) { if (!_t11Optional) { _t11Optional = true; _with = QueryUtil.Remove(_with, _c11); Reset(); } return this; }
+        if (typeof(T) == typeof(T12)) { if (!_t12Optional) { _t12Optional = true; _with = QueryUtil.Remove(_with, _c12); Reset(); } return this; }
+        if (typeof(T) == typeof(T13)) { if (!_t13Optional) { _t13Optional = true; _with = QueryUtil.Remove(_with, _c13); Reset(); } return this; }
+        if (typeof(T) == typeof(T14)) { if (!_t14Optional) { _t14Optional = true; _with = QueryUtil.Remove(_with, _c14); Reset(); } return this; }
+        if (typeof(T) == typeof(T15)) { if (!_t15Optional) { _t15Optional = true; _with = QueryUtil.Remove(_with, _c15); Reset(); } return this; }
+        if (typeof(T) == typeof(T16)) { if (!_t16Optional) { _t16Optional = true; _with = QueryUtil.Remove(_with, _c16); Reset(); } return this; }
+        ThrowHelper.OptionalTypeMismatch(typeof(T), "T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, or T16");
+        return this;
+    }
+
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Inherited() { SetInherited(); return this; }
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Read<T>() where T : struct { MarkRead(_world.IdOf<T>()); return this; }
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Write<T>() where T : struct { MarkWrite(_world.IdOf<T>()); return this; }
 
     public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Up<T>() where T : struct
     { SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }
@@ -4600,6 +4960,8 @@ public sealed class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
         SetCascade(relation.Id);
         return this;
     }
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Desc() { SetCascadeDesc(); return this; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> GetEnumerator() => new(this);
@@ -4642,7 +5004,7 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     {
         _query = q;
         if (q._world._anyUnion) q.EnsureUnionWith();
-        _hasFilter = q._anyInheritance
+        _hasFilter = q._anyInheritance || q._t1Optional || q._t2Optional || q._t3Optional || q._t4Optional || q._t5Optional || q._t6Optional || q._t7Optional || q._t8Optional || q._t9Optional || q._t10Optional || q._t11Optional || q._t12Optional || q._t13Optional || q._t14Optional || q._t15Optional || q._t16Optional
             || (q._world._anyCanToggle && (q._world.IsCanToggleId(q._c1) || q._world.IsCanToggleId(q._c2) || q._world.IsCanToggleId(q._c3) || q._world.IsCanToggleId(q._c4) || q._world.IsCanToggleId(q._c5) || q._world.IsCanToggleId(q._c6) || q._world.IsCanToggleId(q._c7) || q._world.IsCanToggleId(q._c8) || q._world.IsCanToggleId(q._c9) || q._world.IsCanToggleId(q._c10) || q._world.IsCanToggleId(q._c11) || q._world.IsCanToggleId(q._c12) || q._world.IsCanToggleId(q._c13) || q._world.IsCanToggleId(q._c14) || q._world.IsCanToggleId(q._c15) || q._world.IsCanToggleId(q._c16)))
             || (q._world._anySparse && (q._world.IsSparseId(q._c1) || q._world.IsSparseId(q._c2) || q._world.IsSparseId(q._c3) || q._world.IsSparseId(q._c4) || q._world.IsSparseId(q._c5) || q._world.IsSparseId(q._c6) || q._world.IsSparseId(q._c7) || q._world.IsSparseId(q._c8) || q._world.IsSparseId(q._c9) || q._world.IsSparseId(q._c10) || q._world.IsSparseId(q._c11) || q._world.IsSparseId(q._c12) || q._world.IsSparseId(q._c13) || q._world.IsSparseId(q._c14) || q._world.IsSparseId(q._c15) || q._world.IsSparseId(q._c16)))
             || (q._world._anyUnion && q.HasUnionWith);
@@ -4835,52 +5197,52 @@ public ref struct RowEnumerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
             f.CurTable = t;
             bool skip = false;
             if (w.IsSparseId(_query._c1)) { f.Sparse1 = (SparseStorage<T1>)w._sparseStorage[_query._c1.Component]; f.Col1 = null; f.Shared1 = -1; f.Bs1 = null; }
-            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
+            else { f.Sparse1 = null; var (c, s) = _query.ResolveSource<T1>(t, _query._c1); if (c == null && !_query._t1Optional) skip = true; else { f.Col1 = c; f.Shared1 = s; f.Bs1 = _query.ResolveBitset(t, _query._c1, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c2)) { f.Sparse2 = (SparseStorage<T2>)w._sparseStorage[_query._c2.Component]; f.Col2 = null; f.Shared2 = -1; f.Bs2 = null; }
-            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
+            else { f.Sparse2 = null; var (c, s) = _query.ResolveSource<T2>(t, _query._c2); if (c == null && !_query._t2Optional) skip = true; else { f.Col2 = c; f.Shared2 = s; f.Bs2 = _query.ResolveBitset(t, _query._c2, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c3)) { f.Sparse3 = (SparseStorage<T3>)w._sparseStorage[_query._c3.Component]; f.Col3 = null; f.Shared3 = -1; f.Bs3 = null; }
-            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
+            else { f.Sparse3 = null; var (c, s) = _query.ResolveSource<T3>(t, _query._c3); if (c == null && !_query._t3Optional) skip = true; else { f.Col3 = c; f.Shared3 = s; f.Bs3 = _query.ResolveBitset(t, _query._c3, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c4)) { f.Sparse4 = (SparseStorage<T4>)w._sparseStorage[_query._c4.Component]; f.Col4 = null; f.Shared4 = -1; f.Bs4 = null; }
-            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
+            else { f.Sparse4 = null; var (c, s) = _query.ResolveSource<T4>(t, _query._c4); if (c == null && !_query._t4Optional) skip = true; else { f.Col4 = c; f.Shared4 = s; f.Bs4 = _query.ResolveBitset(t, _query._c4, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c5)) { f.Sparse5 = (SparseStorage<T5>)w._sparseStorage[_query._c5.Component]; f.Col5 = null; f.Shared5 = -1; f.Bs5 = null; }
-            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
+            else { f.Sparse5 = null; var (c, s) = _query.ResolveSource<T5>(t, _query._c5); if (c == null && !_query._t5Optional) skip = true; else { f.Col5 = c; f.Shared5 = s; f.Bs5 = _query.ResolveBitset(t, _query._c5, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c6)) { f.Sparse6 = (SparseStorage<T6>)w._sparseStorage[_query._c6.Component]; f.Col6 = null; f.Shared6 = -1; f.Bs6 = null; }
-            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
+            else { f.Sparse6 = null; var (c, s) = _query.ResolveSource<T6>(t, _query._c6); if (c == null && !_query._t6Optional) skip = true; else { f.Col6 = c; f.Shared6 = s; f.Bs6 = _query.ResolveBitset(t, _query._c6, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c7)) { f.Sparse7 = (SparseStorage<T7>)w._sparseStorage[_query._c7.Component]; f.Col7 = null; f.Shared7 = -1; f.Bs7 = null; }
-            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
+            else { f.Sparse7 = null; var (c, s) = _query.ResolveSource<T7>(t, _query._c7); if (c == null && !_query._t7Optional) skip = true; else { f.Col7 = c; f.Shared7 = s; f.Bs7 = _query.ResolveBitset(t, _query._c7, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c8)) { f.Sparse8 = (SparseStorage<T8>)w._sparseStorage[_query._c8.Component]; f.Col8 = null; f.Shared8 = -1; f.Bs8 = null; }
-            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
+            else { f.Sparse8 = null; var (c, s) = _query.ResolveSource<T8>(t, _query._c8); if (c == null && !_query._t8Optional) skip = true; else { f.Col8 = c; f.Shared8 = s; f.Bs8 = _query.ResolveBitset(t, _query._c8, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c9)) { f.Sparse9 = (SparseStorage<T9>)w._sparseStorage[_query._c9.Component]; f.Col9 = null; f.Shared9 = -1; f.Bs9 = null; }
-            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
+            else { f.Sparse9 = null; var (c, s) = _query.ResolveSource<T9>(t, _query._c9); if (c == null && !_query._t9Optional) skip = true; else { f.Col9 = c; f.Shared9 = s; f.Bs9 = _query.ResolveBitset(t, _query._c9, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c10)) { f.Sparse10 = (SparseStorage<T10>)w._sparseStorage[_query._c10.Component]; f.Col10 = null; f.Shared10 = -1; f.Bs10 = null; }
-            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
+            else { f.Sparse10 = null; var (c, s) = _query.ResolveSource<T10>(t, _query._c10); if (c == null && !_query._t10Optional) skip = true; else { f.Col10 = c; f.Shared10 = s; f.Bs10 = _query.ResolveBitset(t, _query._c10, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c11)) { f.Sparse11 = (SparseStorage<T11>)w._sparseStorage[_query._c11.Component]; f.Col11 = null; f.Shared11 = -1; f.Bs11 = null; }
-            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
+            else { f.Sparse11 = null; var (c, s) = _query.ResolveSource<T11>(t, _query._c11); if (c == null && !_query._t11Optional) skip = true; else { f.Col11 = c; f.Shared11 = s; f.Bs11 = _query.ResolveBitset(t, _query._c11, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c12)) { f.Sparse12 = (SparseStorage<T12>)w._sparseStorage[_query._c12.Component]; f.Col12 = null; f.Shared12 = -1; f.Bs12 = null; }
-            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
+            else { f.Sparse12 = null; var (c, s) = _query.ResolveSource<T12>(t, _query._c12); if (c == null && !_query._t12Optional) skip = true; else { f.Col12 = c; f.Shared12 = s; f.Bs12 = _query.ResolveBitset(t, _query._c12, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c13)) { f.Sparse13 = (SparseStorage<T13>)w._sparseStorage[_query._c13.Component]; f.Col13 = null; f.Shared13 = -1; f.Bs13 = null; }
-            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
+            else { f.Sparse13 = null; var (c, s) = _query.ResolveSource<T13>(t, _query._c13); if (c == null && !_query._t13Optional) skip = true; else { f.Col13 = c; f.Shared13 = s; f.Bs13 = _query.ResolveBitset(t, _query._c13, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c14)) { f.Sparse14 = (SparseStorage<T14>)w._sparseStorage[_query._c14.Component]; f.Col14 = null; f.Shared14 = -1; f.Bs14 = null; }
-            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
+            else { f.Sparse14 = null; var (c, s) = _query.ResolveSource<T14>(t, _query._c14); if (c == null && !_query._t14Optional) skip = true; else { f.Col14 = c; f.Shared14 = s; f.Bs14 = _query.ResolveBitset(t, _query._c14, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c15)) { f.Sparse15 = (SparseStorage<T15>)w._sparseStorage[_query._c15.Component]; f.Col15 = null; f.Shared15 = -1; f.Bs15 = null; }
-            else { f.Sparse15 = null; var (c, s) = _query.ResolveSource<T15>(t, _query._c15); if (c == null) skip = true; else { f.Col15 = c; f.Shared15 = s; f.Bs15 = _query.ResolveBitset(t, _query._c15, s); } }
+            else { f.Sparse15 = null; var (c, s) = _query.ResolveSource<T15>(t, _query._c15); if (c == null && !_query._t15Optional) skip = true; else { f.Col15 = c; f.Shared15 = s; f.Bs15 = _query.ResolveBitset(t, _query._c15, s); } }
             if (skip) continue;
             if (w.IsSparseId(_query._c16)) { f.Sparse16 = (SparseStorage<T16>)w._sparseStorage[_query._c16.Component]; f.Col16 = null; f.Shared16 = -1; f.Bs16 = null; }
-            else { f.Sparse16 = null; var (c, s) = _query.ResolveSource<T16>(t, _query._c16); if (c == null) skip = true; else { f.Col16 = c; f.Shared16 = s; f.Bs16 = _query.ResolveBitset(t, _query._c16, s); } }
+            else { f.Sparse16 = null; var (c, s) = _query.ResolveSource<T16>(t, _query._c16); if (c == null && !_query._t16Optional) skip = true; else { f.Col16 = c; f.Shared16 = s; f.Bs16 = _query.ResolveBitset(t, _query._c16, s); } }
             if (skip) continue;
             _count = n;
             _rowIdx = 0;

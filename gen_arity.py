@@ -2,12 +2,10 @@
 """Generate Query<T1..TN> + RowEnumerator<T1..TN> + FilterState<T1..TN> for arities 1..16.
 
 Single source of truth for all query arities. Hand-edit the template here
-then run `python gen_arity.py` to refresh src/Query.Arity.cs. Optional<T>
-support exists only for arities 1-3 (matches the original hand-written
-forms; higher arities omit it for symmetry / less codegen weight)."""
+then run `python gen_arity.py` to refresh src/Query.Arity.cs."""
 
 ARITIES = list(range(1, 17))
-OPTIONAL_MAX_ARITY = 3   # _t{i}Optional fields + Optional<T> method only for n <= this
+OPTIONAL_MAX_ARITY = 16  # _t{i}Optional fields + Optional<T> method available for every arity
 
 
 def t_list(n):
@@ -69,7 +67,7 @@ def gen_optional_block(n, Q):
     elif n == 2:
         names = '"T1 or T2"'
     else:
-        names = '"T1, T2, or T3"'
+        names = '"' + ", ".join(f"T{i}" for i in range(1, n)) + f", or T{n}" + '"'
 
     branches = []
     for i in range(1, n + 1):
@@ -119,9 +117,14 @@ public sealed class {Q} : QueryBase
     }}
 
     public {Q} With<T>() where T : struct {{ AddWith(_world.IdOf<T>()); return this; }}
+    public {Q} With<TR, TT>() where TR : struct where TT : struct {{ AddWith(_world.Pair<TR, TT>()); return this; }}
+    public {Q} With<TR>(EntityId target) where TR : struct {{ AddWith(_world.Pair(_world.Component<TR>(), target)); return this; }}
+    public {Q} With(EntityId relation, EntityId target) {{ AddWith(_world.Pair(relation, target)); return this; }}
     public {Q} With(Id id) {{ AddWith(id); return this; }}
     public {Q} Without<T>() where T : struct {{ AddWithout(_world.IdOf<T>()); return this; }}
     public {Q} Without<TR, TT>() where TR : struct where TT : struct {{ AddWithout(_world.Pair<TR, TT>()); return this; }}
+    public {Q} Without<TR>(EntityId target) where TR : struct {{ AddWithout(_world.Pair(_world.Component<TR>(), target)); return this; }}
+    public {Q} Without(EntityId relation, EntityId target) {{ AddWithout(_world.Pair(relation, target)); return this; }}
     public {Q} Without(Id id) {{ AddWithout(id); return this; }}
     public {Q} Or<TA, TB>() where TA : struct where TB : struct
     {{ AddOr(new[] {{ _world.IdOf<TA>(), _world.IdOf<TB>() }}); return this; }}
@@ -130,6 +133,7 @@ public sealed class {Q} : QueryBase
 {optional_method}
     public {Q} Inherited() {{ SetInherited(); return this; }}
     public {Q} Read<T>() where T : struct {{ MarkRead(_world.IdOf<T>()); return this; }}
+    public {Q} Write<T>() where T : struct {{ MarkWrite(_world.IdOf<T>()); return this; }}
 
     public {Q} Up<T>() where T : struct
     {{ SetTermTraversal(_world.IdOf<T>(), _world.IsA.Id, -1); return this; }}
@@ -149,6 +153,8 @@ public sealed class {Q} : QueryBase
         SetCascade(relation.Id);
         return this;
     }}
+    // Reverse cascade — descendants before ancestors. No-op without Cascade.
+    public {Q} Desc() {{ SetCascadeDesc(); return this; }}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RowEnumerator<{t_list(n)}> GetEnumerator() => new(this);
