@@ -642,12 +642,32 @@ public sealed partial class World
     public EntityId Lookup(string path)
     {
         if (string.IsNullOrEmpty(path)) return default;
+        // Leading '.' forces root resolution — bypasses current scope and
+        // its ancestor chain. Mirrors flecs C ecs_lookup semantics.
+        bool forceRoot = path[0] == '.';
+        if (forceRoot) path = path.Substring(1);
+        if (string.IsNullOrEmpty(path)) return default;
         var parts = path.Split('.');
-        EntityId parent = default; // default = no parent (root scope)
+
+        EntityId scope = forceRoot ? default : _currentScope;
+        // Try resolving relative to scope; if it fails, walk up scope's
+        // ancestor chain and finally try root. Once we've tried root (scope
+        // invalid) without success, give up.
+        while (true)
+        {
+            var result = ResolvePathFrom(scope, parts);
+            if (result.IsValid) return result;
+            if (!scope.IsValid) return default;
+            scope = GetParent(scope);
+        }
+    }
+
+    private EntityId ResolvePathFrom(EntityId scope, string[] parts)
+    {
+        EntityId parent = scope;
         for (int i = 0; i < parts.Length; i++)
         {
-            var seg = parts[i];
-            EntityId found = FindNamedChild(parent, seg);
+            var found = FindNamedChild(parent, parts[i]);
             if (!found.IsValid) return default;
             parent = found;
         }
