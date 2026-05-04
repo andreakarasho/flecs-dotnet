@@ -164,4 +164,83 @@ public class SystemTests
         // Deleting the system entity should drop it from future progress.
         Assert.Equal(1, calls);
     }
+
+    // ===== Disable propagation via ChildOf (flecs C parity) =====
+
+    [Fact]
+    public void Disable_OnSystemEntity_StopsDispatch()
+    {
+        var w = new World();
+        int calls = 0;
+        var h = w.System("s", w.Phases.OnUpdate, _ => calls++);
+        w.Disable(h.Entity);
+        w.Progress(0);
+        Assert.Equal(0, calls);
+        w.Enable(h.Entity);
+        w.Progress(0);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public void Disable_OnScope_DisablesAllChildSystems()
+    {
+        var w = new World();
+        int aHits = 0, bHits = 0;
+        var scope = w.CreateEntity();
+        SystemHandle a, b;
+        using (w.WithScope(scope))
+        {
+            a = w.System("a", w.Phases.OnUpdate, _ => aHits++);
+            b = w.System("b", w.Phases.OnUpdate, _ => bHits++);
+        }
+        w.Progress(0);
+        Assert.Equal(1, aHits);
+        Assert.Equal(1, bHits);
+        // One Disable call on the scope takes both systems offline.
+        w.Disable(scope);
+        w.Progress(0);
+        Assert.Equal(1, aHits);
+        Assert.Equal(1, bHits);
+        // Re-enable scope — both run again.
+        w.Enable(scope);
+        w.Progress(0);
+        Assert.Equal(2, aHits);
+        Assert.Equal(2, bHits);
+    }
+
+    [Fact]
+    public void Disable_DeepScopeChain_StillPropagates()
+    {
+        // grandparent → parent → system entity. Disable grandparent only.
+        var w = new World();
+        int calls = 0;
+        var grand = w.CreateEntity();
+        var parent = w.CreateEntity();
+        w.SetParent(parent, grand);
+        SystemHandle h;
+        using (w.WithScope(parent))
+        {
+            h = w.System("deep", w.Phases.OnUpdate, _ => calls++);
+        }
+        w.Progress(0);
+        Assert.Equal(1, calls);
+        w.Disable(grand);
+        w.Progress(0);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public void Disable_SiblingScope_DoesNotAffectOtherScopes()
+    {
+        var w = new World();
+        int aHits = 0, bHits = 0;
+        var scopeA = w.CreateEntity();
+        var scopeB = w.CreateEntity();
+        using (w.WithScope(scopeA)) w.System("a", w.Phases.OnUpdate, _ => aHits++);
+        using (w.WithScope(scopeB)) w.System("b", w.Phases.OnUpdate, _ => bHits++);
+        w.Disable(scopeA);
+        w.Progress(0);
+        Assert.Equal(0, aHits);
+        Assert.Equal(1, bHits);
+    }
 }

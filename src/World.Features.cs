@@ -435,6 +435,10 @@ public sealed partial class World
             // pipeline rebuild — handle lingers in cached waves until the
             // next rebuild compacts them.
             if (!IsAliveCore(s.Entity)) { _pipelineDirty = true; continue; }
+            // Disabled propagates self+up via ChildOf — mirrors flecs C
+            // default pipeline filter. Lets Disable(scope) take down all
+            // systems parented (directly or transitively) to that scope.
+            if (IsDisabledSelfOrUp(s.Entity)) continue;
             if (!ShouldRunSystem(s)) continue;
             s.Action(new Iter(this, s, deltaTime));
         }
@@ -448,6 +452,33 @@ public sealed partial class World
         if (s.TickSource.Id == 0) return true;
         if (!IsAlive(s.TickSource)) return true;
         return Get<TickSource>(s.TickSource).Tick;
+    }
+
+    // True if entity has Disabled tag OR any ChildOf ancestor has it. Walks
+    // the parent chain; cycle-safe via depth bound (ChildOf is Acyclic so
+    // the chain is finite, but we cap defensively).
+    private bool IsDisabledSelfOrUp(EntityId entity)
+    {
+        var disabledId = (Id)Disabled;
+        var chOf = ChildOf.Id;
+        var cur = entity;
+        for (int depth = 0; depth < 64; depth++)
+        {
+            if (!IsAliveCore(cur)) return false;
+            ref var rec = ref GetSlot(cur.Id);
+            var t = _tablesById[rec.TableId]!;
+            if (t.Has(disabledId)) return true;
+            uint parent = 0;
+            for (int i = 0; i < t.ComponentIds.Length; i++)
+            {
+                var id = t.ComponentIds[i];
+                if (id.IsPair && id.Relation == chOf) { parent = id.Target; break; }
+            }
+            if (parent == 0) return false;
+            ref var ps = ref GetSlot(parent);
+            cur = new EntityId(parent, ps.Generation);
+        }
+        return false;
     }
 
     // Configure worker pool size. 0 → sequential (default). N > 0 → spawn N
@@ -487,6 +518,8 @@ public sealed partial class World
             tasks[idx] = Task.Run(() =>
             {
                 if (!s.Enabled) return;
+                if (!IsAliveCore(s.Entity)) return;
+                if (IsDisabledSelfOrUp(s.Entity)) return;
                 if (!ShouldRunSystem(s)) return;
                 Stage.SetCurrent(stage);
                 try { s.Action(new Iter(this, s, deltaTime)); }
