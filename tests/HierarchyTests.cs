@@ -184,4 +184,60 @@ public class HierarchyTests
         Assert.Equal(b.Id, w.GetParent(c).Id);
         Assert.Equal(a.Id, w.GetParent(b).Id);
     }
+
+    // ===== GetTarget / GetTargets =====
+
+    [Fact]
+    public void GetTarget_Exclusive_ReturnsCurrent()
+    {
+        var w = new World();
+        var p = w.CreateEntity();
+        var c = w.CreateEntity();
+        w.SetParent(c, p);
+        Assert.Equal(p.Id, w.GetTarget(c, w.Relations.ChildOf).Id);
+    }
+
+    [Fact]
+    public void GetTarget_NoSuchRelation_ReturnsDefault()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        Assert.False(w.GetTarget(e, w.Relations.ChildOf).IsValid);
+    }
+
+    [Fact]
+    public void GetTargets_NonExclusive_ReturnsAll()
+    {
+        var w = new World();
+        var inst = w.CreateEntity();
+        var p1 = w.CreateEntity();
+        var p2 = w.CreateEntity();
+        var p3 = w.CreateEntity();
+        w.SetIsA(inst, p1);
+        w.SetIsA(inst, p2);
+        w.SetIsA(inst, p3);
+        var ids = new System.Collections.Generic.HashSet<uint>();
+        foreach (var t in w.GetTargets(inst, w.Relations.IsA)) ids.Add(t.Id);
+        Assert.Contains(p1.Id, ids);
+        Assert.Contains(p2.Id, ids);
+        Assert.Contains(p3.Id, ids);
+        Assert.Equal(3, ids.Count);
+    }
+
+    [Fact]
+    public void GetTargets_NoMatches_Empty()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        Assert.Empty(w.GetTargets(e, w.Relations.IsA));
+    }
+
+    [Fact]
+    public void GetTarget_DeadEntity_ReturnsDefault()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Delete(e);
+        Assert.False(w.GetTarget(e, w.Relations.ChildOf).IsValid);
+    }
 }

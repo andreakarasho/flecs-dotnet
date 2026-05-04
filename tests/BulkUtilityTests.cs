@@ -167,4 +167,59 @@ public class BulkUtilityTests
         // Cloned entity inherits ChildOf relation by default.
         Assert.Equal(p.Id, w.GetParent(dst).Id);
     }
+
+    // ===== RemoveAll =====
+
+    [Fact]
+    public void RemoveAll_Tag_DropsFromEveryHolder()
+    {
+        var w = new World();
+        var ents = new EntityId[5];
+        for (int i = 0; i < ents.Length; i++) { ents[i] = w.CreateEntity(); w.Add<TagA>(ents[i]); }
+        w.RemoveAll<TagA>();
+        foreach (var e in ents) Assert.False(w.Has<TagA>(e));
+        // Holders still alive.
+        foreach (var e in ents) Assert.True(w.IsAlive(e));
+    }
+
+    [Fact]
+    public void RemoveAll_Component_DropsFromEveryHolder()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(1, 1));
+        var b = w.CreateEntity(); w.Set(b, new Position(2, 2)); w.Add<TagA>(b);
+        var c = w.CreateEntity(); w.Add<TagA>(c); // no Position
+        w.RemoveAll<Position>();
+        Assert.False(w.Has<Position>(a));
+        Assert.False(w.Has<Position>(b));
+        Assert.True(w.Has<TagA>(b)); // unrelated tag preserved
+        Assert.True(w.Has<TagA>(c));
+    }
+
+    [Fact]
+    public void RemoveAll_Pair_DropsAllPairsForRelTarget()
+    {
+        var w = new World();
+        var rel = w.Tag<Likes>();
+        var t = w.CreateEntity();
+        var holders = new EntityId[4];
+        for (int i = 0; i < holders.Length; i++) { holders[i] = w.CreateEntity(); w.Add(holders[i], rel, t); }
+        w.RemoveAll(w.Pair(rel, t));
+        foreach (var h in holders) Assert.False(w.Has(h, w.Pair(rel, t)));
+    }
+
+    [Fact]
+    public void RemoveAll_Unregistered_NoOp()
+    {
+        var w = new World();
+        w.RemoveAll<Position>(); // never registered — no throw
+    }
+
+    [Fact]
+    public void RemoveAll_NoHolders_NoOp()
+    {
+        var w = new World();
+        w.Component<Position>();
+        w.RemoveAll<Position>();
+    }
 }

@@ -659,6 +659,34 @@ public sealed partial class World
         }
     }
 
+    // Remove an id (component / tag / pair) from every holder. Holders
+    // remain alive — only the id is dropped. Mirrors flecs C ecs_remove_all.
+    public void RemoveAll(Id id)
+    {
+        // Snapshot holders first — RemoveIdLocked restructures tables, which
+        // invalidates direct iteration over t.Entities mid-loop.
+        using var snapshot = new PooledList<EntityId>(16);
+        lock (_lock)
+        {
+            for (int ti = 1; ti < _tablesById.Count; ti++)
+            {
+                var t = _tablesById[ti];
+                if (t == null || t.Count == 0 || !t.Has(id)) continue;
+                var ents = t.Entities;
+                for (int i = 0; i < ents.Count; i++) snapshot.Add(ents[i]);
+            }
+        }
+        var span = snapshot.AsSpan;
+        for (int i = 0; i < span.Length; i++)
+            if (IsAlive(span[i])) Remove(span[i], id);
+    }
+
+    public void RemoveAll<T>() where T : struct
+    {
+        if (!_typeToEntity.TryGetValue(typeof(T), out var ent)) return;
+        RemoveAll((Id)ent);
+    }
+
     // Delete every direct + transitive child of parent, leaving parent
     // alive. Mirrors flecs C ecs_delete_with(world, ecs_childof(parent)).
     // Useful for tearing down a scope's contents while keeping the scope
@@ -1434,6 +1462,51 @@ public sealed partial class World
     // Enumerate direct children of 'parent'. Scans tables matching
     // (ChildOf, parent). O(tables) per call — fine for occasional use; for hot
     // paths cache via a Query.
+    // Get first target of (relation, *) on entity. Returns default when none.
+    // Mirrors flecs C ecs_get_target(world, entity, rel, 0).
+    public EntityId GetTarget(EntityId entity, EntityId relation)
+    {
+        if (!IsAlive(entity)) return default;
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        uint relId = relation.Id;
+        for (int i = 0; i < t.ComponentIds.Length; i++)
+        {
+            var id = t.ComponentIds[i];
+            if (!id.IsPair || id.Relation != relId) continue;
+            uint tgt = id.Target;
+            if (tgt == 0) continue;
+            ref var ts = ref GetSlot(tgt);
+            return new EntityId(tgt, ts.Generation);
+        }
+        return default;
+    }
+
+    // Enumerate all targets of (relation, *) on entity. Useful for non-
+    // exclusive relations (e.g. IsA with multiple prefab parents). Snapshot
+    // first so caller mutations during iteration are safe.
+    public IEnumerable<EntityId> GetTargets(EntityId entity, EntityId relation)
+    {
+        if (!IsAlive(entity)) yield break;
+        var collected = new List<EntityId>();
+        lock (_lock)
+        {
+            ref var rec = ref GetSlot(entity.Id);
+            var t = _tablesById[rec.TableId]!;
+            uint relId = relation.Id;
+            for (int i = 0; i < t.ComponentIds.Length; i++)
+            {
+                var id = t.ComponentIds[i];
+                if (!id.IsPair || id.Relation != relId) continue;
+                uint tgt = id.Target;
+                if (tgt == 0) continue;
+                ref var ts = ref GetSlot(tgt);
+                collected.Add(new EntityId(tgt, ts.Generation));
+            }
+        }
+        foreach (var e in collected) yield return e;
+    }
+
     public IEnumerable<EntityId> Children(EntityId parent)
     {
         var pair = Id.MakePair(ChildOf, parent);
