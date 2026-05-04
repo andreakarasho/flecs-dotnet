@@ -85,4 +85,79 @@ public class PairTests
         Assert.False(id.IsPair);
         Assert.Equal(7u, id.Component);
     }
+
+    // ===== Wildcard pair Has =====
+
+    [Fact]
+    public void Has_WildcardTarget_MatchesAnyTarget()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        var tgt = w.CreateEntity();
+        w.Add(e, rel, tgt);
+        Assert.True(w.Has(e, w.Pair(rel, w.Relations.Wildcard)));
+    }
+
+    [Fact]
+    public void Has_WildcardTarget_FalseWhenNoSuchRelation()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        Assert.False(w.Has(e, w.Pair(rel, w.Relations.Wildcard)));
+    }
+
+    [Fact]
+    public void Has_WildcardRelation_MatchesAnyRelation()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        var tgt = w.CreateEntity();
+        w.Add(e, rel, tgt);
+        Assert.True(w.Has(e, w.Pair(w.Relations.Wildcard, tgt)));
+    }
+
+    [Fact]
+    public void Has_WildcardBoth_MatchesAnyPair()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        var tgt = w.CreateEntity();
+        w.Add(e, rel, tgt);
+        Assert.True(w.Has(e, w.Pair(w.Relations.Wildcard, w.Relations.Wildcard)));
+    }
+
+    [Fact]
+    public void Has_WildcardBoth_FalseWhenEntityHasNoPairs()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<TagA>(e);
+        Assert.False(w.Has(e, w.Pair(w.Relations.Wildcard, w.Relations.Wildcard)));
+    }
+
+    [Fact]
+    public void PairWildcard_TypedRelationMatchesAnyTarget()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<Likes, Apple>(e);
+        Assert.True(w.Has(e, w.PairWildcard<Likes>()));
+    }
+
+    [Fact]
+    public void Has_WildcardTarget_InheritedViaIsA()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        var rel = w.Tag<Likes>();
+        var tgt = w.CreateEntity();
+        w.Add(prefab, rel, tgt);
+        var inst = w.CreateEntity();
+        w.Add(inst, w.Relations.IsA, prefab);
+        Assert.True(w.Has(inst, w.Pair(rel, w.Relations.Wildcard)));
+    }
 }

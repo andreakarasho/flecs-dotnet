@@ -827,10 +827,65 @@ public sealed partial class World
         if (!IsAlive(entity)) return false;
         if (componentId.IsPair && _unionRelIds.Contains(componentId.Relation))
             return _unionStorage[componentId.Relation].HasTarget(entity.Id, componentId.Target);
+        // Wildcard pair — match any pair where relation/target equals
+        // the non-wildcard side. Mirrors flecs C ecs_has_id semantics.
+        if (componentId.IsPair)
+        {
+            uint wcId = Wildcard.Id;
+            if (componentId.Relation == wcId || componentId.Target == wcId)
+                return HasPairWildcard(entity, componentId.Relation, componentId.Target);
+        }
         ref var rec = ref GetSlot(entity.Id);
         if (_tablesById[rec.TableId]!.Has(componentId)) return true;
         var (found, _, _) = FindInIsAChain(entity, componentId);
         return found;
+    }
+
+    private bool HasPairWildcard(EntityId entity, uint relation, uint target)
+    {
+        uint wcId = Wildcard.Id;
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        var ids = t.ComponentIds;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            var id = ids[i];
+            if (!id.IsPair) continue;
+            bool relMatch = relation == wcId || id.Relation == relation;
+            bool tgtMatch = target == wcId || id.Target == target;
+            if (relMatch && tgtMatch) return true;
+        }
+        // Walk IsA chain — inherited pair satisfies the wildcard match.
+        return HasPairWildcardViaIsA(entity, relation, target);
+    }
+
+    private bool HasPairWildcardViaIsA(EntityId entity, uint relation, uint target)
+    {
+        uint wcId = Wildcard.Id;
+        ref var rec = ref GetSlot(entity.Id);
+        var t = _tablesById[rec.TableId]!;
+        uint isAId = IsA.Id;
+        for (int i = 0; i < t.ComponentIds.Length; i++)
+        {
+            var id = t.ComponentIds[i];
+            if (!id.IsPair || id.Relation != isAId) continue;
+            uint baseId = id.Target;
+            if (baseId == 0) continue;
+            ref var bs = ref GetSlot(baseId);
+            var basEnt = new EntityId(baseId, bs.Generation);
+            if (!IsAlive(basEnt)) continue;
+            var bt = _tablesById[bs.TableId]!;
+            for (int j = 0; j < bt.ComponentIds.Length; j++)
+            {
+                var bid = bt.ComponentIds[j];
+                if (!bid.IsPair) continue;
+                bool relMatch = relation == wcId || bid.Relation == relation;
+                bool tgtMatch = target == wcId || bid.Target == target;
+                if (relMatch && tgtMatch) return true;
+            }
+            if (HasPairWildcardViaIsA(basEnt, relation, target)) return true;
+        }
+        return false;
     }
 
     // Literal-only ownership check. Does NOT walk IsA. Use when you need to
