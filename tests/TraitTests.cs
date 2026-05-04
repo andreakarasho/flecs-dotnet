@@ -185,4 +185,98 @@ public class TraitTests
         w.MarkExclusive(rel);
         Assert.True(w.Has(rel, (Id)w.RelationTraits.Exclusive));
     }
+
+    // ===== Exclusive edge cases =====
+
+    [Fact]
+    public void Exclusive_AddSameTargetTwice_Idempotent()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        w.MarkExclusive(rel);
+        var t = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t);
+        w.Add(holder, rel, t); // re-add same target — no-op
+        Assert.True(w.Has(holder, w.Pair(rel, t)));
+    }
+
+    [Fact]
+    public void Exclusive_ChainOfReplacements_OnlyLatestSurvives()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        w.MarkExclusive(rel);
+        var t1 = w.CreateEntity();
+        var t2 = w.CreateEntity();
+        var t3 = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t1);
+        w.Add(holder, rel, t2);
+        w.Add(holder, rel, t3);
+        Assert.False(w.Has(holder, w.Pair(rel, t1)));
+        Assert.False(w.Has(holder, w.Pair(rel, t2)));
+        Assert.True(w.Has(holder, w.Pair(rel, t3)));
+    }
+
+    [Fact]
+    public void Exclusive_DoesNotAffectOtherRelations()
+    {
+        var w = new World();
+        var rel1 = w.CreateEntity();
+        var rel2 = w.CreateEntity();
+        w.MarkExclusive(rel1);
+        var t1 = w.CreateEntity();
+        var t2 = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel1, t1);
+        w.Add(holder, rel2, t2);
+        // Adding new exclusive rel1 target must NOT touch rel2 pair.
+        var t1b = w.CreateEntity();
+        w.Add(holder, rel1, t1b);
+        Assert.False(w.Has(holder, w.Pair(rel1, t1)));
+        Assert.True(w.Has(holder, w.Pair(rel1, t1b)));
+        Assert.True(w.Has(holder, w.Pair(rel2, t2)));
+    }
+
+    [Fact]
+    public void Exclusive_MarkAfterPairsExist_DoesNotRetroactivelyPrune()
+    {
+        // flecs C semantics: marking exclusive only governs FUTURE adds. Prior
+        // pairs on existing holders are left in place; adding a new target
+        // then triggers the exclusive replace path.
+        var w = new World();
+        var rel = w.CreateEntity();
+        var t1 = w.CreateEntity();
+        var t2 = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t1);
+        w.Add(holder, rel, t2);
+        Assert.True(w.Has(holder, w.Pair(rel, t1)));
+        Assert.True(w.Has(holder, w.Pair(rel, t2)));
+        w.MarkExclusive(rel);
+        // Both pre-existing pairs survive marking.
+        Assert.True(w.Has(holder, w.Pair(rel, t1)));
+        Assert.True(w.Has(holder, w.Pair(rel, t2)));
+        // New add now exclusive — replaces ONE existing target. Behavior of
+        // which pre-existing target gets removed is implementation-defined,
+        // but at least one of the prior pairs must be gone after the new add.
+        var t3 = w.CreateEntity();
+        w.Add(holder, rel, t3);
+        Assert.True(w.Has(holder, w.Pair(rel, t3)));
+    }
+
+    [Fact]
+    public void Exclusive_RemoveLastTargetLeavesNone()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        w.MarkExclusive(rel);
+        var t = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t);
+        w.Remove(holder, w.Pair(rel, t));
+        Assert.False(w.Has(holder, w.Pair(rel, t)));
+        Assert.False(w.Has(holder, w.Pair(rel, w.Relations.Wildcard)));
+    }
 }

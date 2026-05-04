@@ -174,4 +174,114 @@ public class DeletePolicyTests
         w.Delete(p);
         Assert.All(children, c => Assert.False(w.IsAlive(c)));
     }
+
+    // ===== Relation-side deletion (deleting the relation entity itself) =====
+
+    [Fact]
+    public void OnDelete_RelationDeleted_RemovesPairFromHolders_Default()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        var tgt = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, tgt);
+        Assert.True(w.Has(holder, w.Pair(rel, tgt)));
+        w.Delete(rel);
+        Assert.True(w.IsAlive(holder));
+        Assert.False(w.Has(holder, w.Pair(rel, tgt)));
+    }
+
+    [Fact]
+    public void OnDelete_RelationDeleted_DeletePolicyCascadesHolder()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        var tgt = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, tgt);
+        w.SetOnDelete(rel, DeletePolicy.Delete);
+        w.Delete(rel);
+        Assert.False(w.IsAlive(holder));
+    }
+
+    [Fact]
+    public void OnDelete_RelationDeleted_PanicThrows()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        var tgt = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, tgt);
+        w.SetOnDelete(rel, DeletePolicy.Panic);
+        Assert.Throws<InvalidOperationException>(() => w.Delete(rel));
+        Assert.True(w.IsAlive(holder));
+    }
+
+    // ===== OnDeleteTarget matrix =====
+
+    [Fact]
+    public void OnDeleteTarget_DefaultRemovePairFromHolder()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        var tgt = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, tgt);
+        // Default policy when target deleted = Remove (drops pair).
+        w.Delete(tgt);
+        Assert.True(w.IsAlive(holder));
+        Assert.False(w.Has(holder, w.Pair(rel, tgt)));
+    }
+
+    // ===== Multi-pair holder behavior =====
+
+    [Fact]
+    public void OnDelete_TargetDelete_OnlyRemovesAffectedPair()
+    {
+        var w = new World();
+        var rel = w.CreateEntity();
+        var t1 = w.CreateEntity();
+        var t2 = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t1);
+        w.Add(holder, rel, t2);
+        w.Delete(t1);
+        Assert.True(w.IsAlive(holder));
+        Assert.False(w.Has(holder, w.Pair(rel, t1)));
+        Assert.True(w.Has(holder, w.Pair(rel, t2)));
+    }
+
+    [Fact]
+    public void OnDelete_DeletePolicyCascadesTransitively()
+    {
+        // A holds (R, B). B holds (R, C). R has Delete policy when target dies.
+        // Deleting C cascades B (because (R,C) on B → Delete) → A (because
+        // (R,B) on A → Delete).
+        var w = new World();
+        var rel = w.CreateEntity();
+        w.SetOnDeleteTarget(rel, DeletePolicy.Delete);
+        var c = w.CreateEntity();
+        var b = w.CreateEntity();
+        var a = w.CreateEntity();
+        w.Add(b, rel, c);
+        w.Add(a, rel, b);
+        w.Delete(c);
+        Assert.False(w.IsAlive(b));
+        Assert.False(w.IsAlive(a));
+    }
+
+    [Fact]
+    public void OnDelete_PanicAtDeepLevelStillThrows()
+    {
+        // Cascade into a holder with Panic should throw mid-cascade.
+        var w = new World();
+        var rel = w.CreateEntity();
+        w.SetOnDeleteTarget(rel, DeletePolicy.Panic);
+        var t = w.CreateEntity();
+        var holder = w.CreateEntity();
+        w.Add(holder, rel, t);
+        Assert.Throws<InvalidOperationException>(() => w.Delete(t));
+        Assert.True(w.IsAlive(holder));
+        Assert.True(w.IsAlive(t));
+    }
 }
