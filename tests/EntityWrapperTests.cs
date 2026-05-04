@@ -278,6 +278,34 @@ public class EntityWrapperTests
     }
 
     [Fact]
+    public void Factory_EntityName_DisableViaLookup_StopsTickSourceSystem()
+    {
+        // Mirrors a real-user flow: scope entity holds a timer + system bound
+        // to that timer. Disabling the scope by name must take the system
+        // offline despite the tick source firing.
+        var w = new World();
+        int hits = 0;
+        var scopeEnt = w.Entity("scoped_name");
+        using (w.WithScope(scopeEnt))
+        {
+            var tickSource = w.Timer(0.5f);
+            w.System("scope.system", w.Phases.OnUpdate, _ => hits++).SetTickSource(tickSource);
+        }
+        // Drive past the period so the timer ticks at least once.
+        w.Progress(0.6f);
+        Assert.Equal(1, hits);
+        // Disable via name lookup.
+        w.Entity("scoped_name").Disable();
+        w.Progress(0.6f); // timer would tick again, but scope is disabled
+        w.Progress(0.6f);
+        Assert.Equal(1, hits);
+        // Re-enable and confirm dispatch resumes.
+        w.Entity("scoped_name").Enable();
+        w.Progress(0.6f);
+        Assert.Equal(2, hits);
+    }
+
+    [Fact]
     public void Factory_EntityName_DisableViaLookup_AffectsOriginal()
     {
         // The bug from real-user flow: Entity(string) used to always create —
