@@ -130,4 +130,138 @@ public class DeferTests
         }
         Assert.False(w.IsDeferred);
     }
+
+    // ===== Ordering / op interaction =====
+
+    [Fact]
+    public void Defer_AddThenRemoveSameFrame_NetEffectIsAbsent()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Add<TagA>(e);
+            w.Remove<TagA>(e);
+        }
+        Assert.False(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Defer_RemoveThenAddSameFrame_NetEffectIsPresent()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<TagA>(e);
+        using (w.Defer())
+        {
+            w.Remove<TagA>(e);
+            w.Add<TagA>(e);
+        }
+        Assert.True(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Defer_AddSameTagTwice_Idempotent()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Add<TagA>(e);
+            w.Add<TagA>(e);
+        }
+        Assert.True(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Defer_SetThenAddOtherTag_BothApplied()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Set(e, new Position(5, 6));
+            w.Add<TagA>(e);
+        }
+        Assert.True(w.Has<TagA>(e));
+        Assert.Equal(5, w.Get<Position>(e).X);
+    }
+
+    [Fact]
+    public void Defer_DeleteThenAdd_DeleteWins()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Delete(e);
+            w.Add<TagA>(e); // entity already queued for delete
+        }
+        Assert.False(w.IsAlive(e));
+    }
+
+    [Fact]
+    public void Defer_ObserverFiresOnFlush_NotInsideDefer()
+    {
+        var w = new World();
+        w.Tag<TagA>();
+        int onAdd = 0;
+        w.Observer<TagA>(Event.OnAdd, _ => onAdd++);
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Add<TagA>(e);
+            Assert.Equal(0, onAdd); // not visible yet
+        }
+        Assert.Equal(1, onAdd);
+    }
+
+    [Fact]
+    public void Defer_ObserverFiresOncePerEntity_EvenIfAddRepeated()
+    {
+        var w = new World();
+        w.Tag<TagA>();
+        int onAdd = 0;
+        w.Observer<TagA>(Event.OnAdd, _ => onAdd++);
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Add<TagA>(e);
+            w.Add<TagA>(e);
+        }
+        Assert.Equal(1, onAdd);
+    }
+
+    [Fact]
+    public void Defer_SetCollapsesToFinalValue_ObserverSeesFinal()
+    {
+        var w = new World();
+        int seen = -1;
+        w.Observer<Position>(Event.OnSet, (EventIter _, ref Position c) => seen = (int)c.X);
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Set(e, new Position(1, 0));
+            w.Set(e, new Position(2, 0));
+            w.Set(e, new Position(99, 0));
+        }
+        Assert.Equal(99, seen);
+    }
+
+    [Fact]
+    public void Defer_NestedScopes_SecondLevelDoesNotFlush()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            using (w.Defer())
+            {
+                w.Add<TagA>(e);
+            }
+            // After inner dispose, still under outer defer.
+            Assert.False(w.Has<TagA>(e));
+        }
+        Assert.True(w.Has<TagA>(e));
+    }
 }

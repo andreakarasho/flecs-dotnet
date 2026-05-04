@@ -43,7 +43,7 @@ internal sealed class AddIdCmd : Command
         var c = Rent<AddIdCmd>();
         c.Entity = e; c.Id = id; return c;
     }
-    internal override void Apply(World w) => w.Add(Entity, Id);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Add(Entity, Id); }
     internal override void Recycle() => Return(this);
 }
 
@@ -56,7 +56,7 @@ internal sealed class RemoveIdCmd : Command
         var c = Rent<RemoveIdCmd>();
         c.Entity = e; c.Id = id; return c;
     }
-    internal override void Apply(World w) => w.Remove(Entity, Id);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Remove(Entity, Id); }
     internal override void Recycle() => Return(this);
 }
 
@@ -68,7 +68,7 @@ internal sealed class DeleteCmd : Command
         var c = Rent<DeleteCmd>();
         c.Entity = e; return c;
     }
-    internal override void Apply(World w) => w.Delete(Entity);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Delete(Entity); }
     internal override void Recycle() => Return(this);
 }
 
@@ -81,7 +81,7 @@ internal sealed class SetCmd<T> : Command where T : struct
         var c = Rent<SetCmd<T>>();
         c.Entity = e; c.Value = value; return c;
     }
-    internal override void Apply(World w) => w.Set(Entity, Value);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Set(Entity, Value); }
     internal override void Recycle()
     {
         Value = default; // release any managed refs in T
@@ -98,7 +98,7 @@ internal sealed class AddTypedCmd<T> : Command where T : struct
     public EntityId Entity;
     public static AddTypedCmd<T> Rent(EntityId e)
     { var c = Rent<AddTypedCmd<T>>(); c.Entity = e; return c; }
-    internal override void Apply(World w) => w.Add<T>(Entity);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Add<T>(Entity); }
     internal override void Recycle() => Return(this);
 }
 
@@ -107,7 +107,7 @@ internal sealed class RemoveTypedCmd<T> : Command where T : struct
     public EntityId Entity;
     public static RemoveTypedCmd<T> Rent(EntityId e)
     { var c = Rent<RemoveTypedCmd<T>>(); c.Entity = e; return c; }
-    internal override void Apply(World w) => w.Remove<T>(Entity);
+    internal override void Apply(World w) { if (w.IsAlive(Entity)) w.Remove<T>(Entity); }
     internal override void Recycle() => Return(this);
 }
 
