@@ -257,6 +257,47 @@ public class EntityWrapperTests
     }
 
     [Fact]
+    public void Factory_EntityName_GetOrCreate()
+    {
+        // First call creates; subsequent calls with the same name return the
+        // SAME entity (lookup hit) rather than creating a sibling. Mirrors
+        // flecs C ecs_entity_init(.name) semantics.
+        var w = new World();
+        var first = w.Entity("Game");
+        var second = w.Entity("Game");
+        Assert.Equal(first.Id.Id, second.Id.Id);
+    }
+
+    [Fact]
+    public void Factory_EntityName_LookupResolvesAfterCreate()
+    {
+        var w = new World();
+        var created = w.Entity("Mod");
+        var found = w.Lookup("Mod");
+        Assert.Equal(created.Id.Id, found.Id);
+    }
+
+    [Fact]
+    public void Factory_EntityName_DisableViaLookup_AffectsOriginal()
+    {
+        // The bug from real-user flow: Entity(string) used to always create —
+        // Disable hit a brand-new entity, original kept running. Now
+        // Entity(name) finds the original; Disable propagates correctly.
+        var w = new World();
+        int hits = 0;
+        var scope = w.Entity("Scoped");
+        scope.Scope(() =>
+        {
+            w.System("inner", w.Phases.OnUpdate, _ => hits++);
+        });
+        w.Progress(0);
+        Assert.Equal(1, hits);
+        w.Entity("Scoped").Disable();
+        w.Progress(0);
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
     public void Has_RelationTargetPair()
     {
         var w = new World();

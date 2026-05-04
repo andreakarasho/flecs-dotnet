@@ -362,10 +362,20 @@ public sealed partial class World
 
     // ---- Entity (fluent wrapper) ----
     // world.Entity()         — create a new entity, return fluent handle.
-    // world.Entity(name)     — create + SetName.
+    // world.Entity(name)     — get-or-create by name. Looks up first
+    //                          (scope-aware via Lookup); if not found,
+    //                          creates a new entity and assigns the name.
+    //                          Mirrors flecs C ecs_entity(world, { .name }).
     // world.Entity(EntityId) — wrap an existing handle.
     public Entity Entity() => new(this, CreateEntity());
-    public Entity Entity(string name) { var e = CreateEntity(); SetName(e, name); return new Entity(this, e); }
+    public Entity Entity(string name)
+    {
+        var found = Lookup(name);
+        if (found.IsValid) return new Entity(this, found);
+        var e = CreateEntity();
+        SetName(e, name);
+        return new Entity(this, e);
+    }
     public Entity Entity(EntityId id) => new(this, id);
 
     // Auto-parent newly-created entity to current scope, if any.
