@@ -211,6 +211,27 @@ public abstract class QueryBase
 
     public int MatchedTableCount { get { Rematch(); return _matched.Count; } }
 
+    // Total entity count across all matched tables. O(matchedTables) —
+    // sums Table.Count, no per-row scan. Mirrors flecs C ecs_iter_count
+    // (eager, not lazy: must visit each matched table once).
+    public int Count()
+    {
+        Rematch();
+        int total = 0;
+        for (int i = 0; i < _matched.Count; i++) total += _matched[i].Count;
+        return total;
+    }
+
+    // Fast emptiness check — short-circuits at first non-empty matched
+    // table. Cheaper than Count() == 0 when many tables are empty.
+    public bool Any()
+    {
+        Rematch();
+        for (int i = 0; i < _matched.Count; i++)
+            if (_matched[i].Count > 0) return true;
+        return false;
+    }
+
     // True if any matched table changed since last RowEnumerator dispose
     // (which calls MarkObserved).
     public bool IsChanged()

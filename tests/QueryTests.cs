@@ -294,4 +294,54 @@ public class QueryTests
         foreach (var _ in w.Query<Position>()) hits++;
         Assert.Equal(2, hits);
     }
+
+    // ===== Query.Count / Any =====
+
+    [Fact]
+    public void Query_Count_SumsAcrossMatchedTables()
+    {
+        var w = new World();
+        for (int i = 0; i < 3; i++) { var e = w.CreateEntity(); w.Set(e, new Position(i, 0)); }
+        for (int i = 0; i < 2; i++) { var e = w.CreateEntity(); w.Set(e, new Position(i, 0)); w.Set(e, new Velocity(0, 0)); }
+        Assert.Equal(5, w.Query<Position>().Count());
+        Assert.Equal(2, w.Query<Position, Velocity>().Count());
+    }
+
+    [Fact]
+    public void Query_Count_RespectsFilters()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(0, 0)); w.Add<TagA>(a);
+        var b = w.CreateEntity(); w.Set(b, new Position(0, 0));
+        Assert.Equal(1, w.Query<Position>().With<TagA>().Count());
+        Assert.Equal(1, w.Query<Position>().Without<TagA>().Count());
+    }
+
+    [Fact]
+    public void Query_Count_ZeroWhenEmpty()
+    {
+        var w = new World();
+        w.Component<Position>();
+        Assert.Equal(0, w.Query<Position>().Count());
+    }
+
+    [Fact]
+    public void Query_Any_TrueWhenMatched()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        Assert.True(w.Query<Position>().Any());
+        Assert.False(w.Query<Position, Velocity>().Any());
+    }
+
+    [Fact]
+    public void Query_Any_FalseWhenAllTablesEmpty()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        w.Delete(e);
+        Assert.False(w.Query<Position>().Any());
+    }
 }

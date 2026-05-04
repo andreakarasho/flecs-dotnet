@@ -56,6 +56,7 @@ public readonly struct Entity : IEquatable<Entity>
     // ---- Naming ----
     public Entity SetName(string name) { World.SetName(Id, name); return this; }
     public string? Name => World.GetName(Id);
+    public string? Path => World.GetPath(Id);
 
     // ---- Hierarchy ----
     public Entity SetParent(EntityId parent) { World.SetParent(Id, parent); return this; }
@@ -65,6 +66,11 @@ public readonly struct Entity : IEquatable<Entity>
     public IEnumerable<EntityId> Children() => World.Children(Id);
     // Inverse of SetParent — make 'child' a child of this entity.
     public Entity AddChild(EntityId child) { World.SetParent(child, Id); return this; }
+    public void DeleteChildren() => World.DeleteChildren(Id);
+
+    // ---- Targets ----
+    public EntityId GetTarget(EntityId relation) => World.GetTarget(Id, relation);
+    public IEnumerable<EntityId> GetTargets(EntityId relation) => World.GetTargets(Id, relation);
 
     // ---- Inheritance ----
     public Entity SetIsA(EntityId prefab) { World.SetIsA(Id, prefab); return this; }

@@ -209,4 +209,50 @@ public class EntityWrapperTests
         Assert.True(a.Equals(b));
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
+
+    // ===== Path / DeleteChildren / Target forwarders =====
+
+    [Fact]
+    public void Path_ReturnsDottedPath()
+    {
+        var w = new World();
+        var p = w.Entity("Outer");
+        var c = w.Entity("Leaf").SetParent(p);
+        Assert.Equal("Outer.Leaf", c.Path);
+    }
+
+    [Fact]
+    public void DeleteChildren_TearsDownChildren()
+    {
+        var w = new World();
+        var p = w.Entity("Mod");
+        var c1 = w.Entity("a").SetParent(p);
+        var c2 = w.Entity("b").SetParent(p);
+        p.DeleteChildren();
+        Assert.True(p.IsAlive);
+        Assert.False(c1.IsAlive);
+        Assert.False(c2.IsAlive);
+    }
+
+    [Fact]
+    public void GetTarget_FluentForwarder()
+    {
+        var w = new World();
+        var p = w.Entity();
+        var c = w.Entity().SetParent(p);
+        Assert.Equal(p.Id.Id, c.GetTarget(w.Relations.ChildOf).Id);
+    }
+
+    [Fact]
+    public void GetTargets_NonExclusive_AllReturned()
+    {
+        var w = new World();
+        var p1 = w.Entity();
+        var p2 = w.Entity();
+        var inst = w.Entity().SetIsA(p1).SetIsA(p2);
+        var ids = new System.Collections.Generic.HashSet<uint>();
+        foreach (var t in inst.GetTargets(w.Relations.IsA)) ids.Add(t.Id);
+        Assert.Contains(p1.Id.Id, ids);
+        Assert.Contains(p2.Id.Id, ids);
+    }
 }
