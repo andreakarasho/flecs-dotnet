@@ -1507,6 +1507,22 @@ public sealed partial class World
         foreach (var e in collected) yield return e;
     }
 
+    // Walk every descendant of parent — direct children, grand-children, etc.
+    // BFS order. Snapshot per-level so caller mutations during iteration
+    // are safe. Mirrors flecs C ecs_iter walking ChildOf transitively.
+    public IEnumerable<EntityId> ChildrenRecursive(EntityId parent)
+    {
+        if (!IsAlive(parent)) yield break;
+        var queue = new Queue<EntityId>();
+        foreach (var c in Children(parent)) queue.Enqueue(c);
+        while (queue.Count > 0)
+        {
+            var cur = queue.Dequeue();
+            yield return cur;
+            foreach (var gc in Children(cur)) queue.Enqueue(gc);
+        }
+    }
+
     public IEnumerable<EntityId> Children(EntityId parent)
     {
         var pair = Id.MakePair(ChildOf, parent);

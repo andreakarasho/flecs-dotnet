@@ -240,4 +240,61 @@ public class HierarchyTests
         w.Delete(e);
         Assert.False(w.GetTarget(e, w.Relations.ChildOf).IsValid);
     }
+
+    // ===== ChildrenRecursive =====
+
+    [Fact]
+    public void ChildrenRecursive_VisitsAllDescendants()
+    {
+        var w = new World();
+        var root = w.CreateEntity();
+        var a = w.CreateEntity(); w.SetParent(a, root);
+        var b = w.CreateEntity(); w.SetParent(b, root);
+        var aa = w.CreateEntity(); w.SetParent(aa, a);
+        var ab = w.CreateEntity(); w.SetParent(ab, a);
+        var aaa = w.CreateEntity(); w.SetParent(aaa, aa);
+        var seen = new System.Collections.Generic.HashSet<uint>();
+        foreach (var d in w.ChildrenRecursive(root)) seen.Add(d.Id);
+        Assert.Contains(a.Id, seen);
+        Assert.Contains(b.Id, seen);
+        Assert.Contains(aa.Id, seen);
+        Assert.Contains(ab.Id, seen);
+        Assert.Contains(aaa.Id, seen);
+        Assert.Equal(5, seen.Count);
+    }
+
+    [Fact]
+    public void ChildrenRecursive_NoChildren_Empty()
+    {
+        var w = new World();
+        var lone = w.CreateEntity();
+        Assert.Empty(w.ChildrenRecursive(lone));
+    }
+
+    [Fact]
+    public void ChildrenRecursive_DeadParent_Empty()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Delete(e);
+        Assert.Empty(w.ChildrenRecursive(e));
+    }
+
+    [Fact]
+    public void ChildrenRecursive_BFSOrder_DirectChildrenFirst()
+    {
+        var w = new World();
+        var root = w.CreateEntity();
+        var direct1 = w.CreateEntity(); w.SetParent(direct1, root);
+        var grand1 = w.CreateEntity(); w.SetParent(grand1, direct1);
+        var direct2 = w.CreateEntity(); w.SetParent(direct2, root);
+        var seen = new System.Collections.Generic.List<uint>();
+        foreach (var d in w.ChildrenRecursive(root)) seen.Add(d.Id);
+        // BFS: both direct entries appear before any grandchild.
+        int g1 = seen.IndexOf(grand1.Id);
+        int d1 = seen.IndexOf(direct1.Id);
+        int d2 = seen.IndexOf(direct2.Id);
+        Assert.True(d1 < g1);
+        Assert.True(d2 < g1);
+    }
 }

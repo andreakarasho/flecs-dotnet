@@ -64,6 +64,7 @@ public readonly struct Entity : IEquatable<Entity>
     public Entity Parent => new(World, World.GetParent(Id));
     public bool HasParent(EntityId parent) => World.HasParent(Id, parent);
     public IEnumerable<EntityId> Children() => World.Children(Id);
+    public IEnumerable<EntityId> ChildrenRecursive() => World.ChildrenRecursive(Id);
     // Inverse of SetParent — make 'child' a child of this entity.
     public Entity AddChild(EntityId child) { World.SetParent(child, Id); return this; }
     public void DeleteChildren() => World.DeleteChildren(Id);
