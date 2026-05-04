@@ -72,4 +72,57 @@ public class TagTests
         Assert.True(w.Has<TagB>(e));
         Assert.True(w.Has<TagC>(e));
     }
+
+    [Fact]
+    public void Add_TagTwice_Idempotent()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Add<TagA>(e);
+        w.Add<TagA>(e);
+        w.Add<TagA>(e);
+        Assert.True(w.Has<TagA>(e));
+        // Removing once removes the tag — re-adds were no-ops.
+        w.Remove<TagA>(e);
+        Assert.False(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Tag_RegistersAsEntity_NotComponent()
+    {
+        var w = new World();
+        var tag = w.Tag<TagA>();
+        Assert.True(tag.IsValid);
+        // Component<TagA>() was never called — Has<TagA> works via tag id.
+        var e = w.CreateEntity();
+        w.Add<TagA>(e);
+        Assert.True(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Tag_TwoTypesShareDistinctIds()
+    {
+        var w = new World();
+        var a = w.Tag<TagA>();
+        var b = w.Tag<TagB>();
+        Assert.NotEqual(a.Id, b.Id);
+    }
+
+    [Fact]
+    public void Tag_RemoveBeforeAdd_NoOp()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Remove<TagA>(e); // never added
+        Assert.False(w.Has<TagA>(e));
+    }
+
+    [Fact]
+    public void Tag_AddOnDeadEntityThrows()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Delete(e);
+        Assert.Throws<InvalidOperationException>(() => w.Add<TagA>(e));
+    }
 }

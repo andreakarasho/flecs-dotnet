@@ -157,4 +157,56 @@ public class CustomEventTests
         // OnSpawn registered as an entity (tag-style).
         Assert.True(w.IdOf<OnSpawn>().Component != 0u);
     }
+
+    // ===== Emit interaction edges =====
+
+    [Fact]
+    public void Observer_ManySubscribers_AllFire()
+    {
+        var w = new World();
+        int total = 0;
+        for (int i = 0; i < 5; i++) w.Observer<OnHit, Position>(it => total++);
+        w.Emit<OnHit, Position>(w.CreateEntity());
+        Assert.Equal(5, total);
+    }
+
+    [Fact]
+    public void Observer_DistinctTargetsTracked()
+    {
+        var w = new World();
+        int posHits = 0, velHits = 0;
+        w.Observer<OnHit, Position>(it => posHits++);
+        w.Observer<OnHit, Velocity>(it => velHits++);
+        var e = w.CreateEntity();
+        w.Emit<OnHit, Position>(e);
+        Assert.Equal(1, posHits);
+        Assert.Equal(0, velHits);
+        w.Emit<OnHit, Velocity>(e);
+        Assert.Equal(1, posHits);
+        Assert.Equal(1, velHits);
+    }
+
+    [Fact]
+    public void Observer_TargetLess_ManyEmits()
+    {
+        var w = new World();
+        int hits = 0;
+        w.Observer<Click>(it => hits++);
+        var e = w.CreateEntity();
+        for (int i = 0; i < 10; i++) w.Emit<Click>(e);
+        Assert.Equal(10, hits);
+    }
+
+    [Fact]
+    public void Observer_PairEvent_DistinctPairsDoNotCross()
+    {
+        var w = new World();
+        int apple = 0, orange = 0;
+        w.Observer<OnHit, Likes, Apple>(it => apple++);
+        w.Observer<OnHit, Likes, Orange>(it => orange++);
+        var e = w.CreateEntity();
+        w.Emit<OnHit, Likes, Apple>(e);
+        Assert.Equal(1, apple);
+        Assert.Equal(0, orange);
+    }
 }

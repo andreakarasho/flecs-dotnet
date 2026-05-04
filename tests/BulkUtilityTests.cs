@@ -117,4 +117,54 @@ public class BulkUtilityTests
         foreach (var _ in w.Query<Position>().Without(w.States.Disabled)) hits++;
         Assert.Equal(1, hits);
     }
+
+    [Fact]
+    public void BulkNew_LargeCount_AllAlive()
+    {
+        var w = new World();
+        var ents = w.BulkNew<Position>(1000);
+        Assert.Equal(1000, ents.Length);
+        var distinct = new System.Collections.Generic.HashSet<uint>();
+        foreach (var e in ents) distinct.Add(e.Id);
+        Assert.Equal(1000, distinct.Count);
+    }
+
+    [Fact]
+    public void Count_Pair_CountsPairHolders()
+    {
+        var w = new World();
+        var rel = w.Tag<Likes>();
+        var t = w.CreateEntity();
+        for (int i = 0; i < 4; i++)
+        {
+            var e = w.CreateEntity();
+            w.Add(e, rel, t);
+        }
+        Assert.Equal(4, w.Count(w.Pair(rel, t)));
+    }
+
+    [Fact]
+    public void Disable_Idempotent()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Disable(e);
+        w.Disable(e); // re-disable — no-op
+        Assert.False(w.IsEnabled(e));
+        w.Enable(e);
+        Assert.True(w.IsEnabled(e));
+    }
+
+    [Fact]
+    public void Clone_HierarchyShape_PreservesParent()
+    {
+        var w = new World();
+        var p = w.CreateEntity();
+        var src = w.CreateEntity();
+        w.SetParent(src, p);
+        w.Set(src, new Position(1, 1));
+        var dst = w.Clone(src);
+        // Cloned entity inherits ChildOf relation by default.
+        Assert.Equal(p.Id, w.GetParent(dst).Id);
+    }
 }
