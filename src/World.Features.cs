@@ -668,10 +668,11 @@ public sealed partial class World
         if (!IsAlive(parent)) return;
         // Snapshot first — Children() yields a live enumerator that becomes
         // invalid after the first Delete restructures tables.
-        var snapshot = new System.Collections.Generic.List<EntityId>();
+        using var snapshot = new PooledList<EntityId>(8);
         foreach (var c in Children(parent)) snapshot.Add(c);
-        for (int i = 0; i < snapshot.Count; i++)
-            if (IsAlive(snapshot[i])) Delete(snapshot[i]);
+        var span = snapshot.AsSpan;
+        for (int i = 0; i < span.Length; i++)
+            if (IsAlive(span[i])) Delete(span[i]);
     }
 
     // Disable / enable entity via Disabled tag. Queries do NOT auto-skip;
