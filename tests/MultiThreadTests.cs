@@ -124,7 +124,7 @@ public class MultiThreadTests
         w.System("a", w.Phases.OnUpdate, _ => threads.Add(Thread.CurrentThread.ManagedThreadId)).SetParallelSafe(true);
         w.System("b", w.Phases.OnUpdate, _ => threads.Add(Thread.CurrentThread.ManagedThreadId)).SetParallelSafe(true);
         w.Progress(0);
-        Assert.Equal(1, new System.Collections.Generic.HashSet<int>(threads).Count);
+        Assert.Single(new System.Collections.Generic.HashSet<int>(threads));
     }
 
     [Fact]
@@ -137,6 +137,6 @@ public class MultiThreadTests
         w.System("a", w.Phases.OnUpdate, _ => threads.Add(Thread.CurrentThread.ManagedThreadId)).SetParallelSafe(true);
         w.System("b", w.Phases.OnUpdate, _ => threads.Add(Thread.CurrentThread.ManagedThreadId)).SetParallelSafe(true);
         w.Progress(0);
-        Assert.Equal(1, new System.Collections.Generic.HashSet<int>(threads).Count);
+        Assert.Single(new System.Collections.Generic.HashSet<int>(threads));
     }
 }
