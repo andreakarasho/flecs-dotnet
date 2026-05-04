@@ -318,4 +318,130 @@ public class ModuleScopingTests
         var t = w.Timer(0.5f);
         Assert.False(w.GetParent(t).IsValid);
     }
+
+    // ===== Components / tags / pipelines / events inside WithScope =====
+    // Mirrors flecs C: every entity-creation op while a scope is active
+    // gets (ChildOf, scope) added. Components and tags additionally get
+    // auto-named so path lookup ("Scope.TypeName") resolves them.
+
+    public struct ScopedComp { public int V; }
+    public struct ScopedTag { }
+
+    [Fact]
+    public void WithScope_ComponentParentedAndNamed()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        w.SetName(scope, "ManualScope");
+        EntityId compEnt;
+        using (w.WithScope(scope))
+        {
+            compEnt = w.Component<ScopedComp>();
+        }
+        Assert.Equal(scope.Id, w.GetParent(compEnt).Id);
+        Assert.Equal(nameof(ScopedComp), w.GetName(compEnt));
+        // Path lookup resolves component by Scope.Type.
+        Assert.Equal(compEnt.Id, w.Lookup($"ManualScope.{nameof(ScopedComp)}").Id);
+    }
+
+    [Fact]
+    public void WithScope_TagParentedAndNamed()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        w.SetName(scope, "TagsHere");
+        EntityId tagEnt;
+        using (w.WithScope(scope))
+        {
+            tagEnt = w.Tag<ScopedTag>();
+        }
+        Assert.Equal(scope.Id, w.GetParent(tagEnt).Id);
+        Assert.Equal(nameof(ScopedTag), w.GetName(tagEnt));
+    }
+
+    [Fact]
+    public void WithScope_PipelineParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        EntityId p;
+        using (w.WithScope(scope))
+        {
+            p = w.CreatePipeline().With(w.PipelineMeta.SystemTag).Build();
+        }
+        Assert.Equal(scope.Id, w.GetParent(p).Id);
+    }
+
+    [Fact]
+    public void WithScope_PlainEntityParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        EntityId e;
+        using (w.WithScope(scope))
+        {
+            e = w.CreateEntity();
+        }
+        Assert.Equal(scope.Id, w.GetParent(e).Id);
+    }
+
+    [Fact]
+    public void WithScope_NamedEntityParentedAndLookable()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        w.SetName(scope, "Outer");
+        EntityId leaf;
+        using (w.WithScope(scope))
+        {
+            leaf = w.Entity("Leaf").Id;
+        }
+        Assert.Equal(scope.Id, w.GetParent(leaf).Id);
+        Assert.Equal(leaf.Id, w.Lookup("Outer.Leaf").Id);
+    }
+
+    public struct ScopedEvt { }
+
+    [Fact]
+    public void WithScope_CustomEventTypeRegisteredUnderScope()
+    {
+        // Observer<TEvent>(...) auto-registers TEvent as a tag-style entity.
+        // While scope is active, that registration is parented + named.
+        var w = new World();
+        var scope = w.CreateEntity();
+        w.SetName(scope, "EvtScope");
+        using (w.WithScope(scope))
+        {
+            w.Observer<ScopedEvt>(_ => { });
+        }
+        // Path lookup resolves the registered event type as Scope.Type.
+        var found = w.Lookup($"EvtScope.{nameof(ScopedEvt)}");
+        Assert.True(found.IsValid);
+    }
+
+    [Fact]
+    public void NestedWithScope_InnerEntityParentedToInnerScope()
+    {
+        var w = new World();
+        var outer = w.CreateEntity();
+        var inner = w.CreateEntity();
+        w.SetParent(inner, outer);
+        EntityId leaf;
+        using (w.WithScope(outer))
+        using (w.WithScope(inner))
+        {
+            leaf = w.CreateEntity();
+        }
+        // Innermost scope wins.
+        Assert.Equal(inner.Id, w.GetParent(leaf).Id);
+    }
+
+    [Fact]
+    public void NoScope_ComponentRemainsAtRoot()
+    {
+        var w = new World();
+        var compEnt = w.Component<ScopedComp>();
+        Assert.False(w.GetParent(compEnt).IsValid);
+        Assert.Null(w.GetName(compEnt));
+    }
 }

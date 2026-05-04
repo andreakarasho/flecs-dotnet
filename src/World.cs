@@ -636,8 +636,10 @@ public sealed partial class World
         return ent;
     }
 
-    // Auto-name + scope a freshly registered component/tag, but ONLY inside
-    // a module scope. Default world ops stay clean (don't pull in EntityName).
+    // Auto-name + scope a freshly registered component/tag whenever a scope
+    // is active (set by Import or WithScope). Default world ops with no
+    // active scope stay clean — no auto-name, no ChildOf — to avoid pulling
+    // in EntityName or polluting the root namespace.
     private void ApplyModuleScopeLocked(EntityId ent, string name)
     {
         if (!_currentScope.IsValid) return;
