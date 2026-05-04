@@ -152,4 +152,55 @@ public class InheritedQueryTests
         Assert.Contains(inst.Id, seen);
         Assert.DoesNotContain(bossInst.Id, seen);
     }
+
+    [Fact]
+    public void Inherited_NoPrefabHolders_OnlyDirectMatches()
+    {
+        // No IsA chain — Inherited() should still return direct holders.
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(1, 0));
+        var b = w.CreateEntity(); w.Set(b, new Position(2, 0));
+        var seen = new HashSet<uint>();
+        foreach (var row in w.Query<Position>().Inherited())
+            seen.Add(row.Entity.Id);
+        Assert.Equal(2, seen.Count);
+        Assert.Contains(a.Id, seen);
+        Assert.Contains(b.Id, seen);
+    }
+
+    [Fact]
+    public void Inherited_RespectsDontInherit()
+    {
+        var w = new World();
+        var compEnt = w.Component<Position>();
+        w.MarkDontInherit(compEnt);
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(7, 7));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        // inst should NOT appear — Position blocked from inheritance.
+        var seen = new HashSet<uint>();
+        foreach (var row in w.Query<Position>().Inherited())
+            seen.Add(row.Entity.Id);
+        Assert.Contains(prefab.Id, seen);
+        Assert.DoesNotContain(inst.Id, seen);
+    }
+
+    [Fact]
+    public void Inherited_PrefabDeleteRemovesInst()
+    {
+        var w = new World();
+        var prefab = w.CreateEntity();
+        w.Set(prefab, new Position(1, 1));
+        var inst = w.CreateEntity();
+        w.SetIsA(inst, prefab);
+        // Default OnDeleteTarget for IsA is Remove → drop the IsA pair.
+        w.Delete(prefab);
+        var seen = new HashSet<uint>();
+        foreach (var row in w.Query<Position>().Inherited())
+            seen.Add(row.Entity.Id);
+        Assert.DoesNotContain(prefab.Id, seen);
+        // inst no longer inherits Position — pair gone.
+        Assert.DoesNotContain(inst.Id, seen);
+    }
 }

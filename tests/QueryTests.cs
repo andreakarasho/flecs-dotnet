@@ -204,4 +204,94 @@ public class QueryTests
             hits++;
         Assert.Equal(1, hits);
     }
+
+    // ===== Filter compositions =====
+
+    [Fact]
+    public void Query_With_AndWithout_BothApplied()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(0, 0)); w.Add<TagA>(a);
+        var b = w.CreateEntity(); w.Set(b, new Position(0, 0)); w.Add<TagA>(b); w.Add<Frozen>(b);
+        var c = w.CreateEntity(); w.Set(c, new Position(0, 0));
+        int hits = 0;
+        var seen = new HashSet<uint>();
+        foreach (var row in w.Query<Position>().With<TagA>().Without<Frozen>())
+        { hits++; seen.Add(row.Entity.Id); }
+        Assert.Equal(1, hits);
+        Assert.Contains(a.Id, seen);
+    }
+
+    [Fact]
+    public void Query_MultipleWith_AllRequired()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(0, 0)); w.Add<TagA>(a); w.Add<TagB>(a);
+        var b = w.CreateEntity(); w.Set(b, new Position(0, 0)); w.Add<TagA>(b);
+        var c = w.CreateEntity(); w.Set(c, new Position(0, 0)); w.Add<TagB>(c);
+        int hits = 0;
+        foreach (var _ in w.Query<Position>().With<TagA>().With<TagB>()) hits++;
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
+    public void Query_Or_DoesNotMatchEntityLackingBoth()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(0, 0)); w.Add<Boss>(a);
+        var b = w.CreateEntity(); w.Set(b, new Position(0, 0));
+        int hits = 0;
+        foreach (var _ in w.Query<Position>().Or<Boss, Frozen>()) hits++;
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
+    public void Query_NoEntitiesMatchingProducesNoRows()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        int hits = 0;
+        foreach (var _ in w.Query<Position>().With<TagA>()) hits++;
+        Assert.Equal(0, hits);
+    }
+
+    [Fact]
+    public void Query_Restart_VisitsAllRowsAgain()
+    {
+        var w = new World();
+        for (int i = 0; i < 3; i++) { var e = w.CreateEntity(); w.Set(e, new Position(i, 0)); }
+        var q = w.Query<Position>();
+        int first = 0, second = 0;
+        foreach (var _ in q) first++;
+        foreach (var _ in q) second++;
+        Assert.Equal(3, first);
+        Assert.Equal(3, second);
+    }
+
+    [Fact]
+    public void Query_ZeroTerms_NotApplicable()
+    {
+        // Smallest query is arity 1 — generic Query<T> requires T. This test
+        // documents that and ensures Query<T>() with no entities yields zero
+        // rows but no exceptions.
+        var w = new World();
+        w.Component<Position>();
+        int hits = 0;
+        foreach (var _ in w.Query<Position>()) hits++;
+        Assert.Equal(0, hits);
+    }
+
+    [Fact]
+    public void Query_TermDistinguishesSubsetTables()
+    {
+        // Position-only table and Position+Velocity table both match a single
+        // Position term.
+        var w = new World();
+        var a = w.CreateEntity(); w.Set(a, new Position(0, 0));
+        var b = w.CreateEntity(); w.Set(b, new Position(0, 0)); w.Set(b, new Velocity(0, 0));
+        int hits = 0;
+        foreach (var _ in w.Query<Position>()) hits++;
+        Assert.Equal(2, hits);
+    }
 }
