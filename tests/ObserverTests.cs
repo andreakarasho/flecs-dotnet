@@ -238,4 +238,133 @@ public class ObserverTests
         w.Set(inst, new Velocity(1, 1));
         Assert.Equal(1, hits);
     }
+
+    // ===== Lifecycle / disposal =====
+
+    [Fact]
+    public void Observer_OnAdd_DoesNotFireOnSubsequentSet()
+    {
+        var w = new World();
+        int onAdd = 0;
+        w.Observer<Position>(Event.OnAdd, (EventIter _, ref Position _) => onAdd++);
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        w.Set(e, new Position(1, 0));
+        w.Set(e, new Position(2, 0));
+        Assert.Equal(1, onAdd);
+    }
+
+    [Fact]
+    public void Observer_OnAdd_FiresAgainAfterReadd()
+    {
+        var w = new World();
+        int onAdd = 0;
+        w.Observer<Position>(Event.OnAdd, (EventIter _, ref Position _) => onAdd++);
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        w.Remove<Position>(e);
+        w.Set(e, new Position(0, 0));
+        Assert.Equal(2, onAdd);
+    }
+
+    [Fact]
+    public void Observer_DistinctEventsTrackedSeparately()
+    {
+        var w = new World();
+        int onAdd = 0, onSet = 0, onRemove = 0;
+        w.Observer<Position>(Event.OnAdd, (EventIter _, ref Position _) => onAdd++);
+        w.Observer<Position>(Event.OnSet, (EventIter _, ref Position _) => onSet++);
+        w.Observer<Position>(Event.OnRemove, (EventIter _, ref Position _) => onRemove++);
+        var e = w.CreateEntity();
+        w.Set(e, new Position(1, 1));     // OnAdd + OnSet
+        w.Set(e, new Position(2, 2));     // OnSet
+        w.Remove<Position>(e);            // OnRemove
+        Assert.Equal(1, onAdd);
+        Assert.Equal(2, onSet);
+        Assert.Equal(1, onRemove);
+    }
+
+    // ===== Defer interactions =====
+
+    [Fact]
+    public void Observer_DeferredAdd_FiresOnFlush()
+    {
+        var w = new World();
+        int hits = 0;
+        w.Observer<Position>(Event.OnAdd, (EventIter _, ref Position _) => hits++);
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Set(e, new Position(0, 0));
+            Assert.Equal(0, hits);
+        }
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
+    public void Observer_DeferredAddRemove_NetZeroNoFire()
+    {
+        var w = new World();
+        int onAdd = 0, onRemove = 0;
+        w.Observer<Position>(Event.OnAdd, (EventIter _, ref Position _) => onAdd++);
+        w.Observer<Position>(Event.OnRemove, (EventIter _, ref Position _) => onRemove++);
+        var e = w.CreateEntity();
+        using (w.Defer())
+        {
+            w.Set(e, new Position(0, 0));
+            w.Remove<Position>(e);
+        }
+        // Net effect: component is absent. Both ops applied at flush — OnAdd
+        // fires when the column appears, OnRemove fires when it goes.
+        Assert.Equal(1, onAdd);
+        Assert.Equal(1, onRemove);
+        Assert.False(w.Has<Position>(e));
+    }
+
+    // ===== Specific-pair observer =====
+
+    [Fact]
+    public void Observer_SpecificPair_FiresOnlyForThatPair()
+    {
+        var w = new World();
+        int hits = 0;
+        w.Observer<Likes, Apple>(Event.OnAdd, _ => hits++);
+        var e = w.CreateEntity();
+        w.Add<Likes, Orange>(e);   // wrong target → no fire
+        Assert.Equal(0, hits);
+        w.Add<Likes, Apple>(e);    // matches → fires
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
+    public void Observer_OnRemove_NotFiredIfNeverHadComponent()
+    {
+        var w = new World();
+        int hits = 0;
+        w.Observer<Position>(Event.OnRemove, (EventIter _, ref Position _) => hits++);
+        var e = w.CreateEntity();
+        w.Remove<Position>(e); // never had → no-op, no fire
+        Assert.Equal(0, hits);
+    }
+
+    [Fact]
+    public void Observer_DoesNotSelfTriggerWhenBodyMutatesUnrelatedEntity()
+    {
+        // Body adds Position to a different entity inside Defer — must not
+        // recurse infinitely.
+        var w = new World();
+        int hits = 0;
+        var second = w.CreateEntity();
+        w.Observer<Position>(Event.OnAdd, (EventIter it, ref Position _) =>
+        {
+            hits++;
+            if (it.Entity.Id != second.Id)
+            {
+                using (w.Defer()) w.Set(second, new Position(0, 0));
+            }
+        });
+        var e = w.CreateEntity();
+        w.Set(e, new Position(0, 0));
+        Assert.Equal(2, hits); // first for e, then for second on flush
+    }
 }
