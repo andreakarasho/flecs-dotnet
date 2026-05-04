@@ -139,6 +139,11 @@ public sealed partial class World
     {
         RebuildPhaseOrderLocked();
         _phaseWaves.Clear();
+        // Compact _systems by dropping handles whose backing entity is dead —
+        // user can Delete(handle.Entity) to retire a system. Done at rebuild
+        // time so the cost is bounded by pipeline-dirty events.
+        for (int i = _systems.Count - 1; i >= 0; i--)
+            if (!IsAliveCore(_systems[i].Entity)) _systems.RemoveAt(i);
         // Wave packing covers _phaseOrder phases + OnStart (which is excluded
         // from per-frame iteration but still needs waves built so the first
         // Progress can dispatch its systems).
@@ -426,6 +431,10 @@ public sealed partial class World
         {
             var s = wave[i];
             if (!s.Enabled) continue;
+            // Skip systems whose backing entity was deleted since the last
+            // pipeline rebuild — handle lingers in cached waves until the
+            // next rebuild compacts them.
+            if (!IsAliveCore(s.Entity)) { _pipelineDirty = true; continue; }
             if (!ShouldRunSystem(s)) continue;
             s.Action(new Iter(this, s, deltaTime));
         }

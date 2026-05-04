@@ -93,4 +93,95 @@ public class HierarchyTests
         w.ClearParent(c);
         Assert.False(w.GetParent(c).IsValid);
     }
+
+    // ===== Reparent / change-parent =====
+
+    [Fact]
+    public void SetParent_ChangesParent_OldNoLongerHasChild()
+    {
+        var w = new World();
+        var p1 = w.CreateEntity();
+        var p2 = w.CreateEntity();
+        var c = w.CreateEntity();
+        w.SetParent(c, p1);
+        w.SetParent(c, p2);
+        Assert.Equal(p2.Id, w.GetParent(c).Id);
+        Assert.DoesNotContain(c.Id, w.Children(p1).Select(e => e.Id));
+        Assert.Contains(c.Id, w.Children(p2).Select(e => e.Id));
+    }
+
+    [Fact]
+    public void SetParent_SelfThrowsOrIsRefused()
+    {
+        // Self-parenting must not produce a cyclic ChildOf — flecs rejects it.
+        var w = new World();
+        var e = w.CreateEntity();
+        Assert.Throws<System.InvalidOperationException>(() => w.SetParent(e, e));
+    }
+
+    [Fact]
+    public void Children_EmptyWhenNoChildren()
+    {
+        var w = new World();
+        var p = w.CreateEntity();
+        Assert.Empty(w.Children(p));
+    }
+
+    [Fact]
+    public void Children_StaleAfterClearParent()
+    {
+        var w = new World();
+        var p = w.CreateEntity();
+        var c = w.CreateEntity();
+        w.SetParent(c, p);
+        w.ClearParent(c);
+        Assert.Empty(w.Children(p));
+    }
+
+    [Fact]
+    public void IsAncestor_FalseForSelf()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        Assert.False(w.IsAncestor(e, e));
+    }
+
+    [Fact]
+    public void HasParent_FalseAfterReparent()
+    {
+        var w = new World();
+        var p1 = w.CreateEntity();
+        var p2 = w.CreateEntity();
+        var c = w.CreateEntity();
+        w.SetParent(c, p1);
+        w.SetParent(c, p2);
+        Assert.False(w.HasParent(c, p1));
+        Assert.True(w.HasParent(c, p2));
+    }
+
+    [Fact]
+    public void ClearParent_OnRootEntityIsNoop()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        w.ClearParent(e); // no throw
+        Assert.False(w.GetParent(e).IsValid);
+    }
+
+    [Fact]
+    public void Hierarchy_DeepChain_GetParentReturnsImmediate()
+    {
+        var w = new World();
+        var a = w.CreateEntity();
+        var b = w.CreateEntity();
+        var c = w.CreateEntity();
+        var d = w.CreateEntity();
+        w.SetParent(b, a);
+        w.SetParent(c, b);
+        w.SetParent(d, c);
+        // GetParent returns immediate parent, not root.
+        Assert.Equal(c.Id, w.GetParent(d).Id);
+        Assert.Equal(b.Id, w.GetParent(c).Id);
+        Assert.Equal(a.Id, w.GetParent(b).Id);
+    }
 }
