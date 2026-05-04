@@ -201,4 +201,78 @@ public class NamingTests
         Assert.False(w.Lookup(".").IsValid);
         Assert.False(w.Lookup("").IsValid);
     }
+
+    // ===== GetPath =====
+
+    [Fact]
+    public void GetPath_SingleNamedEntity_ReturnsName()
+    {
+        var w = new World();
+        var e = w.CreateEntity(); w.SetName(e, "Alpha");
+        Assert.Equal("Alpha", w.GetPath(e));
+    }
+
+    [Fact]
+    public void GetPath_NestedChain_ReturnsDottedPath()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.SetName(a, "Outer");
+        var b = w.CreateEntity(); w.SetName(b, "Inner");
+        var c = w.CreateEntity(); w.SetName(c, "Leaf");
+        w.SetParent(b, a);
+        w.SetParent(c, b);
+        Assert.Equal("Outer.Inner.Leaf", w.GetPath(c));
+    }
+
+    [Fact]
+    public void GetPath_RoundTripWithLookup()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); w.SetName(a, "x");
+        var b = w.CreateEntity(); w.SetName(b, "y");
+        w.SetParent(b, a);
+        var path = w.GetPath(b);
+        Assert.Equal("x.y", path);
+        Assert.Equal(b.Id, w.Lookup(path!).Id);
+    }
+
+    [Fact]
+    public void GetPath_UnnamedEntity_ReturnsNull()
+    {
+        var w = new World();
+        var e = w.CreateEntity();
+        Assert.Null(w.GetPath(e));
+    }
+
+    [Fact]
+    public void GetPath_UnnamedAncestor_ReturnsNull()
+    {
+        var w = new World();
+        var a = w.CreateEntity(); // unnamed
+        var b = w.CreateEntity(); w.SetName(b, "leaf");
+        w.SetParent(b, a);
+        Assert.Null(w.GetPath(b));
+    }
+
+    [Fact]
+    public void GetPath_DeadEntity_ReturnsNull()
+    {
+        var w = new World();
+        var e = w.CreateEntity(); w.SetName(e, "x");
+        w.Delete(e);
+        Assert.Null(w.GetPath(e));
+    }
+
+    [Fact]
+    public void GetPath_ScopedComponent_ResolvesViaPath()
+    {
+        var w = new World();
+        var scope = w.CreateEntity(); w.SetName(scope, "Mod");
+        EntityId compEnt;
+        using (w.WithScope(scope))
+        {
+            compEnt = w.Component<Position>();
+        }
+        Assert.Equal($"Mod.{nameof(Position)}", w.GetPath(compEnt));
+    }
 }

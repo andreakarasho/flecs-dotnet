@@ -678,6 +678,28 @@ public sealed partial class World
         return Get<EntityName>(entity).Value;
     }
 
+    // Build the dotted path from root to entity, e.g. "Outer.Inner.Leaf".
+    // Walks ChildOf chain upward, collecting names. Returns null if any
+    // ancestor (or the entity itself) has no name. Mirrors flecs C
+    // ecs_get_path with default sep "." and root parent.
+    public string? GetPath(EntityId entity)
+    {
+        if (!IsAlive(entity)) return null;
+        var name = GetName(entity);
+        if (name == null) return null;
+        var parts = new System.Collections.Generic.List<string> { name };
+        var cur = GetParent(entity);
+        while (cur.IsValid)
+        {
+            var pn = GetName(cur);
+            if (pn == null) return null;
+            parts.Add(pn);
+            cur = GetParent(cur);
+        }
+        parts.Reverse();
+        return string.Join('.', parts);
+    }
+
     // Lookup entity by name or dotted path "a.b.c". Each segment matched by
     // EntityName under appropriate parent (root for first segment, ChildOf
     // parent for subsequent). Returns default on miss. O(n) scan.
