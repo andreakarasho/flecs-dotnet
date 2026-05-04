@@ -51,6 +51,7 @@ public sealed partial class World
             // custom tags via world.Add(h.Entity, myTag) for pipeline filters.
             var ent = CreateEntityCore();
             EnsureHasIdLocked(ent, (Id)SystemTag);
+            ApplyScopeLocked(ent);
             h.Entity = ent;
             _systems.Add(h);
             _pipelineDirty = true;
@@ -263,6 +264,7 @@ public sealed partial class World
         {
             e = CreateEntityCore();
             EnsureHasIdLocked(e, (Id)Phase);
+            ApplyScopeLocked(e);
             _pipelineDirty = true;
         }
         if (name != null) SetName(e, name);
@@ -342,6 +344,7 @@ public sealed partial class World
             var e = CreateEntityCore();
             Set(e, new Timer(period, 0f));
             Set(e, new TickSource(false));
+            ApplyScopeLocked(e);
             _timerSources.Add(e);
             return e;
         }
@@ -355,6 +358,7 @@ public sealed partial class World
             var e = CreateEntityCore();
             Set(e, new RateFilter(rate, 0, source.Id));
             Set(e, new TickSource(false));
+            ApplyScopeLocked(e);
             _rateSources.Add(e);
             return e;
         }

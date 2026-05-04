@@ -249,4 +249,73 @@ public class ModuleScopingTests
         Assert.Null(w.GetName(e));
         Assert.False(w.GetParent(e).IsValid);
     }
+
+    [Fact]
+    public void WithScope_SystemParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        SystemHandle h;
+        using (w.WithScope(scope))
+        {
+            h = w.System("scoped_sys", w.OnUpdate, _ => { });
+        }
+        Assert.Equal(scope.Id, w.GetParent(h.Entity).Id);
+    }
+
+    [Fact]
+    public void WithScope_TimerParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        EntityId t;
+        using (w.WithScope(scope))
+        {
+            t = w.Timer(0.5f);
+        }
+        Assert.Equal(scope.Id, w.GetParent(t).Id);
+    }
+
+    [Fact]
+    public void WithScope_RateParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        var src = w.Timer(0.1f);
+        EntityId r;
+        using (w.WithScope(scope))
+        {
+            r = w.Rate(src, 2);
+        }
+        Assert.Equal(scope.Id, w.GetParent(r).Id);
+    }
+
+    [Fact]
+    public void WithScope_CreatePhaseParentedToScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        EntityId p;
+        using (w.WithScope(scope))
+        {
+            p = w.CreatePhase("scoped_phase");
+        }
+        Assert.Equal(scope.Id, w.GetParent(p).Id);
+    }
+
+    [Fact]
+    public void NoScope_SystemHasNoParent()
+    {
+        var w = new World();
+        var h = w.System("unscoped_sys", w.OnUpdate, _ => { });
+        Assert.False(w.GetParent(h.Entity).IsValid);
+    }
+
+    [Fact]
+    public void NoScope_TimerHasNoParent()
+    {
+        var w = new World();
+        var t = w.Timer(0.5f);
+        Assert.False(w.GetParent(t).IsValid);
+    }
 }
