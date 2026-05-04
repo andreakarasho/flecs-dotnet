@@ -659,6 +659,21 @@ public sealed partial class World
         }
     }
 
+    // Delete every direct + transitive child of parent, leaving parent
+    // alive. Mirrors flecs C ecs_delete_with(world, ecs_childof(parent)).
+    // Useful for tearing down a scope's contents while keeping the scope
+    // entity around for re-population.
+    public void DeleteChildren(EntityId parent)
+    {
+        if (!IsAlive(parent)) return;
+        // Snapshot first — Children() yields a live enumerator that becomes
+        // invalid after the first Delete restructures tables.
+        var snapshot = new System.Collections.Generic.List<EntityId>();
+        foreach (var c in Children(parent)) snapshot.Add(c);
+        for (int i = 0; i < snapshot.Count; i++)
+            if (IsAlive(snapshot[i])) Delete(snapshot[i]);
+    }
+
     // Disable / enable entity via Disabled tag. Queries do NOT auto-skip;
     // pair with .Without(world.Disabled).
     public void Disable(EntityId entity) => Add(entity, (Id)Disabled);

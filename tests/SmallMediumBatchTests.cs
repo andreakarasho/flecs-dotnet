@@ -444,4 +444,101 @@ public class ModuleScopingTests
         Assert.False(w.GetParent(compEnt).IsValid);
         Assert.Null(w.GetName(compEnt));
     }
+
+    public struct ScopedComp2 { public int V; }
+    public struct ScopedTag2 { }
+
+    [Fact]
+    public void DeleteScope_CascadesToAllChildren()
+    {
+        // Delete(scope) should tear down everything created inside it via the
+        // ChildOf OnDeleteTarget=Delete policy. Mirrors flecs C cleanup of
+        // a module entity.
+        var w = new World();
+        var scope = w.CreateEntity();
+        SystemHandle sys; EntityId tmr; EntityId phase; EntityId entity; EntityId compEnt;
+        using (w.WithScope(scope))
+        {
+            sys = w.System("s", w.Phases.OnUpdate, _ => { });
+            tmr = w.Timer(0.5f);
+            phase = w.CreatePhase("p");
+            entity = w.CreateEntity();
+            compEnt = w.Component<ScopedComp2>();
+        }
+        w.Delete(scope);
+        Assert.False(w.IsAlive(scope));
+        Assert.False(w.IsAlive(sys.Entity));
+        Assert.False(w.IsAlive(tmr));
+        Assert.False(w.IsAlive(phase));
+        Assert.False(w.IsAlive(entity));
+        Assert.False(w.IsAlive(compEnt));
+    }
+
+    [Fact]
+    public void DeleteScope_DeletedSystemNotRunByProgress()
+    {
+        var w = new World();
+        int hits = 0;
+        var scope = w.CreateEntity();
+        using (w.WithScope(scope))
+        {
+            w.System("s", w.Phases.OnUpdate, _ => hits++);
+        }
+        w.Progress(0);
+        Assert.Equal(1, hits);
+        w.Delete(scope);
+        w.Progress(0);
+        Assert.Equal(1, hits);
+    }
+
+    [Fact]
+    public void DeleteChildren_TearsDownScopeButKeepsScope()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        SystemHandle sys; EntityId tmr; EntityId entity;
+        using (w.WithScope(scope))
+        {
+            sys = w.System("s", w.Phases.OnUpdate, _ => { });
+            tmr = w.Timer(0.5f);
+            entity = w.CreateEntity();
+        }
+        w.DeleteChildren(scope);
+        Assert.True(w.IsAlive(scope));
+        Assert.False(w.IsAlive(sys.Entity));
+        Assert.False(w.IsAlive(tmr));
+        Assert.False(w.IsAlive(entity));
+    }
+
+    [Fact]
+    public void DeleteChildren_NoChildrenIsNoop()
+    {
+        var w = new World();
+        var lone = w.CreateEntity();
+        w.DeleteChildren(lone);
+        Assert.True(w.IsAlive(lone));
+    }
+
+    [Fact]
+    public void DeleteChildren_DeadParentIsNoop()
+    {
+        var w = new World();
+        var p = w.CreateEntity();
+        w.Delete(p);
+        w.DeleteChildren(p); // no throw
+    }
+
+    [Fact]
+    public void DeleteChildren_ScopeReusableAfterTeardown()
+    {
+        var w = new World();
+        var scope = w.CreateEntity();
+        using (w.WithScope(scope)) w.System("first", w.Phases.OnUpdate, _ => { });
+        w.DeleteChildren(scope);
+        // Re-populate.
+        SystemHandle second;
+        using (w.WithScope(scope)) second = w.System("second", w.Phases.OnUpdate, _ => { });
+        Assert.True(w.IsAlive(second.Entity));
+        Assert.Equal(scope.Id, w.GetParent(second.Entity).Id);
+    }
 }
