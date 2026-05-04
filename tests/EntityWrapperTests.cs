@@ -255,4 +255,45 @@ public class EntityWrapperTests
         Assert.Contains(p1.Id.Id, ids);
         Assert.Contains(p2.Id.Id, ids);
     }
+
+    [Fact]
+    public void Has_RelationTargetPair()
+    {
+        var w = new World();
+        var rel = w.Tag<Likes>();
+        var t = w.Entity();
+        var e = w.Entity().Add(rel, t);
+        Assert.True(e.Has(rel, t.Id));
+    }
+
+    [Fact]
+    public void Scope_RunsInsideEntityScope()
+    {
+        var w = new World();
+        var mod = w.Entity("Mod");
+        EntityId child = default;
+        mod.Scope(() =>
+        {
+            child = w.CreateEntity();
+        });
+        Assert.Equal(mod.Id.Id, w.GetParent(child).Id);
+    }
+
+    [Fact]
+    public void Scope_PopulatesModuleWithSystemsAndComponents()
+    {
+        var w = new World();
+        SystemHandle? sys = null;
+        EntityId compEnt = default;
+        var mod = w.Entity("Game");
+        mod.Scope(() =>
+        {
+            compEnt = w.Component<ScopedFluentComp>();
+            sys = w.System("tick", w.Phases.OnUpdate, _ => { });
+        });
+        Assert.Equal(mod.Id.Id, w.GetParent(compEnt).Id);
+        Assert.Equal(mod.Id.Id, w.GetParent(sys!.Entity).Id);
+    }
 }
+
+public struct ScopedFluentComp { public int V; }

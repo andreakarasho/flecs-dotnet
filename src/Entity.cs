@@ -72,6 +72,19 @@ public readonly struct Entity : IEquatable<Entity>
     public EntityId GetTarget(EntityId relation) => World.GetTarget(Id, relation);
     public IEnumerable<EntityId> GetTargets(EntityId relation) => World.GetTargets(Id, relation);
 
+    // ---- Pair sugar ----
+    public Entity Add(EntityId relation, Entity target) { World.Add(Id, relation, target.Id); return this; }
+    public bool Has(EntityId relation, EntityId target) => World.Has(Id, World.Pair(relation, target));
+
+    // ---- Scoped block: code inside the action runs with this entity as
+    // the active scope. Newly created entities/components get parented +
+    // named. Mirrors flecs C ecs_set_scope w/ RAII via using.
+    public Entity Scope(Action build)
+    {
+        using (World.WithScope(Id)) build();
+        return this;
+    }
+
     // ---- Inheritance ----
     public Entity SetIsA(EntityId prefab) { World.SetIsA(Id, prefab); return this; }
     public bool HasIsA(EntityId prefab) => World.HasIsA(Id, prefab);
