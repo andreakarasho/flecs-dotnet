@@ -554,6 +554,67 @@ public sealed partial class World
         EmitInternal(evtId, entity, pair, propagateRel);
     }
 
+    // ---- Payload events (event type == payload type, cpp parity) ----
+
+    // Subscribe to events of payload type T. World-level — fires for any
+    // Emit<T>(payload) regardless of target entity.
+    public ObserverHandle Observer<T>(PayloadEventAction<T> action) where T : struct
+        => RegisterPayloadSub(default, action);
+
+    // Internal — used by world.Observer and entity.Observe (which sets target).
+    internal ObserverHandle RegisterPayloadSub<T>(EntityId target, PayloadEventAction<T> action)
+        where T : struct
+    {
+        var handle = new ObserverHandle(Event.OnAdd);
+        lock (_lock)
+        {
+            if (!_payloadChannels.TryGetValue(typeof(T), out var box))
+            {
+                box = new PayloadChannel<T>();
+                _payloadChannels[typeof(T)] = box;
+            }
+            ((PayloadChannel<T>)box).Subs.Add(new PayloadSub<T>
+            {
+                Handle = handle, Target = target, Action = action
+            });
+        }
+        return handle;
+    }
+
+    // Emit T with no target — world-level event. Subs registered with no
+    // target filter fire; entity-scoped subs do not (their Target is set).
+    public void Emit<T>(in T payload) where T : struct
+        => EmitPayload(default, in payload);
+
+    // Emit T targeting a specific entity. Both world-level subs and
+    // entity-scoped subs (whose Target matches) fire.
+    public void Emit<T>(EntityId target, in T payload) where T : struct
+        => EmitPayload(target, in payload);
+
+    private void EmitPayload<T>(EntityId target, in T payload) where T : struct
+    {
+        PayloadChannel<T>? ch;
+        lock (_lock)
+        {
+            if (!_payloadChannels.TryGetValue(typeof(T), out var box)) return;
+            ch = (PayloadChannel<T>)box;
+        }
+        // Snapshot count under lock to guard against reentrant subscribe
+        // mutating the list mid-dispatch.
+        int n;
+        lock (_lock) n = ch.Subs.Count;
+        for (int i = 0; i < n; i++)
+        {
+            PayloadSub<T> s;
+            lock (_lock) s = ch.Subs[i];
+            if (!s.Handle.Enabled) continue;
+            // Filter: if sub has a target, target must match.
+            if (s.Target.IsValid && s.Target.Id != target.Id) continue;
+            var iter = new EventIter(this, s.Handle, target, Event.OnAdd);
+            s.Action(iter, in payload);
+        }
+    }
+
     private void EmitInternal(uint evtId, EntityId entity, Id id, EntityId propagateRel)
     {
         Action<World, EntityId>? a;

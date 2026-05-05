@@ -209,4 +209,124 @@ public class CustomEventTests
         Assert.Equal(1, apple);
         Assert.Equal(0, orange);
     }
+
+    // ===== Payload events (cpp `world.event<E>().ctx(&p).emit()` parity) =====
+
+    public struct Hello { public int N; }
+    public struct Resize { public double W, H; }
+
+    [Fact]
+    public void PayloadEmit_World_FiresPayloadObserver()
+    {
+        var w = new World();
+        int seen = 0;
+        w.Observer<Hello>((EventIter it, in Hello h) => seen = h.N);
+        w.Emit(new Hello { N = 42 });
+        Assert.Equal(42, seen);
+    }
+
+    [Fact]
+    public void PayloadEmit_World_NoTarget_StillFires()
+    {
+        var w = new World();
+        EntityId target = default;
+        w.Observer<Hello>((EventIter it, in Hello h) => target = it.Entity);
+        w.Emit(new Hello());
+        Assert.False(target.IsValid);
+    }
+
+    [Fact]
+    public void PayloadEmit_NoSubs_NoOp()
+    {
+        var w = new World();
+        w.Emit(new Hello { N = 1 }); // no observers, must not throw
+    }
+
+    [Fact]
+    public void PayloadEmit_TargetedFiresWorldSubs()
+    {
+        var w = new World();
+        int n = 0;
+        w.Observer<Hello>((EventIter it, in Hello h) => n += h.N);
+        var e = w.CreateEntity();
+        w.Emit(e, new Hello { N = 5 });
+        Assert.Equal(5, n);
+    }
+
+    [Fact]
+    public void EntityEmit_Tag_FiresWorldObserver()
+    {
+        var w = new World();
+        EntityId seen = default;
+        w.Observer<Click>(it => seen = it.Entity);
+        var widget = w.Entity();
+        widget.Emit<Click>();
+        Assert.Equal(widget.Id.Id, seen.Id);
+    }
+
+    [Fact]
+    public void EntityEmit_Payload_FiresWorldPayloadObserver()
+    {
+        var w = new World();
+        Resize seen = default;
+        w.Observer<Resize>((EventIter it, in Resize p) => seen = p);
+        var widget = w.Entity();
+        widget.Emit(new Resize { W = 100, H = 200 });
+        Assert.Equal(100, seen.W);
+        Assert.Equal(200, seen.H);
+    }
+
+    [Fact]
+    public void EntityObserve_Tag_OnlyFiresForSelf()
+    {
+        var w = new World();
+        var a = w.Entity();
+        var b = w.Entity();
+        int aHits = 0;
+        a.Observe<Click>(it => aHits++);
+        b.Emit<Click>();
+        Assert.Equal(0, aHits);
+        a.Emit<Click>();
+        Assert.Equal(1, aHits);
+    }
+
+    [Fact]
+    public void EntityObserve_Payload_OnlyFiresForSelf()
+    {
+        var w = new World();
+        var a = w.Entity();
+        var b = w.Entity();
+        Resize seen = default;
+        int aHits = 0;
+        a.Observe<Resize>((EventIter it, in Resize p) => { aHits++; seen = p; });
+        b.Emit(new Resize { W = 1, H = 2 });
+        Assert.Equal(0, aHits);
+        a.Emit(new Resize { W = 3, H = 4 });
+        Assert.Equal(1, aHits);
+        Assert.Equal(3, seen.W);
+        Assert.Equal(4, seen.H);
+    }
+
+    [Fact]
+    public void EntityObserve_Payload_WorldEmitNoTarget_DoesNotFire()
+    {
+        var w = new World();
+        var widget = w.Entity();
+        int hits = 0;
+        widget.Observe<Hello>((EventIter _, in Hello _) => hits++);
+        w.Emit(new Hello { N = 1 }); // no target — entity-scoped sub must not fire
+        Assert.Equal(0, hits);
+    }
+
+    [Fact]
+    public void DisabledHandle_StopsPayloadDispatch()
+    {
+        var w = new World();
+        int hits = 0;
+        var h = w.Observer<Hello>((EventIter it, in Hello _) => hits++);
+        w.Emit(new Hello());
+        h.SetEnabled(false);
+        w.Emit(new Hello());
+        Assert.Equal(1, hits);
+    }
 }

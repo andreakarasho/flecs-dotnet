@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Flecs;
 
@@ -75,6 +76,26 @@ public delegate void EventAction(EventIter it);
 public delegate void EventAction<T1>(EventIter it, ref T1 c1) where T1 : struct;
 public delegate void EventAction<T1, T2>(EventIter it, ref T1 c1, ref T2 c2)
     where T1 : struct where T2 : struct;
+
+// Payload event delegate. Carries the emitted value by ref to avoid copies
+// for large structs. Mirrors flecs cpp `entity.observe([](Resize&){...})`.
+public delegate void PayloadEventAction<T>(EventIter it, in T payload) where T : struct;
+
+// Per-payload-type subscriber list. Stored in World._payloadChannels boxed
+// as `object`; cast back to the typed channel on dispatch (zero alloc, cast
+// is cheap). Each sub may carry an optional entity filter.
+internal sealed class PayloadChannel<T> where T : struct
+{
+    public readonly List<PayloadSub<T>> Subs = new();
+}
+
+internal struct PayloadSub<T> where T : struct
+{
+    public ObserverHandle Handle;
+    // EntityId.IsValid == false → world-level (match all targets).
+    public EntityId Target;
+    public PayloadEventAction<T> Action;
+}
 
 // Observer registration handle. Counterpart to SystemHandle: carries a Ctx
 // slot readable inside the body via EventIter.Ctx<T>(). Returned by every

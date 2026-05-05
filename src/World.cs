@@ -161,6 +161,12 @@ public sealed partial class World
     private readonly Dictionary<(Type, Type), (uint evtId, Id tgt)> _emitKeyCache1 = new();
     private readonly Dictionary<(Type, Type, Type), (uint evtId, Id tgt)> _emitKeyCache2 = new();
 
+    // Payload-event channels. Keyed by payload type T; value is
+    // `PayloadChannel<T>` boxed as object. Separate from _customObs:
+    // payload events fuse event-id == payload-type (cpp parity), and each
+    // sub may carry an optional entity filter for entity-scoped Observe.
+    private readonly Dictionary<Type, object> _payloadChannels = new();
+
     // Pooled BFS buffers for EmitInternal propagation. Reused across calls;
     // reentrancy guard falls back to fresh allocs if a callback re-emits.
     private List<EntityId>? _emitChainBuf;

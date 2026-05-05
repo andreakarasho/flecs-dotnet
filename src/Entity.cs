@@ -93,6 +93,32 @@ public readonly struct Entity : IEquatable<Entity>
     public bool TryGetInherited<T>(out T value) where T : struct => World.TryGetInherited<T>(Id, out value);
     public bool HasInherited<T>() where T : struct => World.HasInherited<T>(Id);
 
+    // ---- Events ----
+    // Emit a tag-style event on this entity. Mirrors cpp `entity.emit<E>()`.
+    // Fires all world.Observer<E>(EventAction) subscribers; propagation
+    // through relation chains is opt-in via the underlying world.Emit overload.
+    public Entity Emit<E>() where E : struct { World.Emit<E>(Id); return this; }
+
+    // Emit a payload-carrying event targeting this entity. Mirrors cpp
+    // `entity.emit<E>(payload)`. Fires world.Observer<E>(PayloadEventAction)
+    // subscribers and entity.Observe<E>(...) subs whose target matches.
+    public Entity Emit<E>(in E payload) where E : struct { World.Emit<E>(Id, in payload); return this; }
+
+    // Subscribe to tag-style event E only when emitted on this entity.
+    // Mirrors cpp `entity.observe<E>([](){...})`. Routes through the
+    // existing world.Observer<E>(EventAction) channel with an entity filter
+    // so it pairs with entity.Emit<E>() (which targets _customObs).
+    public ObserverHandle Observe<E>(EventAction action) where E : struct
+    {
+        var self = Id;
+        return World.Observer<E>(it => { if (it.Entity.Id == self.Id) action(it); });
+    }
+
+    // Subscribe to payload event E only when emitted on this entity.
+    // Mirrors cpp `entity.observe<E>([](Resize& p){...})`.
+    public ObserverHandle Observe<E>(PayloadEventAction<E> action) where E : struct
+        => World.RegisterPayloadSub<E>(Id, action);
+
     public bool Equals(Entity other) => Id.Equals(other.Id) && ReferenceEquals(World, other.World);
     public override bool Equals(object? obj) => obj is Entity e && Equals(e);
     public override int GetHashCode() => Id.GetHashCode();
